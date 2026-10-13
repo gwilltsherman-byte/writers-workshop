@@ -7,8 +7,8 @@ For this private repository, authenticate to GitHub when cloning, or download
 the ZIP from Code in the repository and extract it.
 
 ```sh
-git clone https://github.com/gwilltsherman-byte/writers-workshop.git
-cd writers-workshop
+git clone https://github.com/gwilltsherman-byte/writers-workshop-clean.git
+cd writers-workshop-clean
 cp .env.example .env
 ```
 

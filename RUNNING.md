@@ -1,5 +1,26 @@
 # Run Writers’ Workshop on Mac and iPhone
 
+## Install the hosted app
+
+Open the permanent app URL in Safari. On iPhone choose **Share > Add to Home
+Screen**. On Mac choose **File > Add to Dock**. Open that icon before writing
+so you use the installed app's saved draft. Closing it keeps your writing.
+After it has loaded once, you can keep drafting offline. **Install app** in
+the app's footer includes the same steps.
+
+In Write, **Save a backup** downloads your current draft and genres.
+**Restore a backup** opens that file on another device. Passwords and player
+credentials are not included. Private browsing and clearing app data can remove
+local drafts, so retain a backup before doing either.
+
+Chats, critiques, games, shared drafts and published stories use the permanent
+PostgreSQL database and require an internet connection. Guest identities return
+on the same device; sign in to return to an account on another device. Guest
+device credentials expire after a year of inactivity for security.
+
+Deployment is deferred while the Netlify team is paused. The local and Codespaces
+steps below are for development, not the public app's normal installation.
+
 ## Mac
 
 Install Node.js 22 and PostgreSQL 16 or later. Authenticate to GitHub when
@@ -23,8 +44,9 @@ npm run dev
 
 Open `http://localhost:3000`. Keep Terminal open; Control-C stops the app.
 The website, chat, critiques, games and shared drafts all use this same server.
-Each browser tab gets a guest identity, so you can test a two-player game with
-two tabs. Signed-in accounts use the same player identity across their tabs.
+Guest identities persist on a device and are shared across its tabs. Use
+two different browsers or devices to test two players. Signed-in accounts use
+the same player identity across their tabs.
 
 SMTP is optional in development. Without it, signup shows a development-only
 verification code in the signup form. Set SMTP values to test real delivery.
@@ -51,7 +73,7 @@ pause is resolved. This version has not been deployed yet.
 
 Open the final Netlify URL in a Mac browser or iPhone Safari. On iPhone choose
 Share, Add to Home Screen for a shortcut. Use the same game invite link to join
-friends. Guest sessions are tied to a tab; sign in to use an account again on
+friends. Guest sessions return on this device; sign in to use an account on
 another device. Chat and game activity is shared through the database.
 
 ## GitHub Codespaces

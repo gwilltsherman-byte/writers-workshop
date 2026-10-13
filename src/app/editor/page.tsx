@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { cx, Icon, Notice } from "@/components/ui";
 import { useAuth } from "@/contexts/auth";
+import { readDraft, writeDraft, draftBackup, parseDraftBackup } from "../../../public/draft-storage.js";
 
 const categories = [
   "Fiction",
@@ -18,7 +19,7 @@ const categories = [
   "Horror",
   "Humor",
 ];
-const STORAGE_KEY = "ww-editor-draft";
+
 
 export default function EditorPage() {
   const { me } = useAuth();
@@ -26,7 +27,8 @@ export default function EditorPage() {
   const [html, setHtml] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState("Saved in this browser");
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [status, setStatus] = useState("Opening saved draft…");
   const [notice, setNotice] = useState<{
     tone: "success" | "danger";
     text: React.ReactNode;
@@ -47,25 +49,36 @@ export default function EditorPage() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const draft = JSON.parse(saved);
-        setTitle(draft.title || "");
-        setHtml(draft.html || "");
-        setGenres(Array.isArray(draft.genres) ? draft.genres : []);
-      }
-    } catch {}
+      const draft = readDraft(localStorage);
+      setTitle(draft.title); setHtml(draft.html); setGenres(draft.genres);
+      setStatus("Saved on this device");
+    } catch {
+      setStatus("Could not open the saved draft. Its original copy is kept; restore a backup before editing.");
+    }
+    setDraftLoaded(true);
   }, []);
 
-  useEffect(() => {
+  function saveChange(next: { title: string; html: string; genres: string[] }) {
+    try { writeDraft(localStorage, next); setStatus("Saved on this device"); }
+    catch { setStatus("Could not save. Download a backup before closing this app."); }
+  }
+  function downloadBackup() {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(draftBackup({ title, html, genres }))], { type: "application/json" }));
+    link.download = "workshop-draft-backup.json"; link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 60000);
+  }
+  async function restoreBackup(file: File | undefined) {
+    if (!file) return;
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ title, html, genres }),
-      );
-      setStatus("Saved in this browser");
-    } catch {}
-  }, [title, html, genres]);
+      if (file.size > 2_000_000) throw new Error("The backup is too large.");
+      const next = parseDraftBackup(await file.text());
+      if (!window.confirm("Replace the draft on this device? Save a backup of your current writing first.")) return;
+      writeDraft(localStorage, next);
+      setTitle(next.title); setHtml(next.html); setGenres(next.genres);
+      setStatus("Backup restored and saved on this device");
+    } catch (error) { setNotice({ tone: "danger", text: error instanceof Error ? error.message : "Could not restore that backup." }); }
+  }
 
   // A prompt picked on the home page arrives as ?prompt=...
   useEffect(() => {
@@ -131,7 +144,7 @@ export default function EditorPage() {
     } catch {
       setNotice({
         tone: "danger",
-        text: "Publishing didn’t work. Your draft is safe here; try again in a moment.",
+        text: "Publishing didn’t work. Your writing is still in this editor; save a backup and try publishing again when connected.",
       });
     } finally {
       setSaving(false);
@@ -139,9 +152,8 @@ export default function EditorPage() {
   }
 
   function toggle(cat: string) {
-    setGenres((g) =>
-      g.includes(cat) ? g.filter((x) => x !== cat) : [...g, cat],
-    );
+    const next = genres.includes(cat) ? genres.filter(x => x !== cat) : [...genres, cat];
+    setGenres(next); saveChange({ title, html, genres: next });
   }
 
   return (
@@ -149,6 +161,8 @@ export default function EditorPage() {
       <div className="grid gap-10 lg:grid-cols-[1fr_15rem] lg:gap-14">
         <section className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <button onClick={downloadBackup} disabled={!draftLoaded} className="btn-secondary">Save a backup</button>
+            <label className="btn-secondary cursor-pointer">Restore a backup<input className="sr-only" type="file" accept=".json,application/json" onChange={e => { void restoreBackup(e.target.files?.[0]); e.target.value = ""; }} /></label>
             <Link href="/collaborate" className="btn-secondary">
               Write together
             </Link>
@@ -195,8 +209,10 @@ export default function EditorPage() {
             </label>
             <input
               id="draft-title"
+              maxLength={500}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              disabled={!draftLoaded}
+              onChange={(e) => { setTitle(e.target.value); saveChange({ title: e.target.value, html, genres }); }}
               className="mt-12 w-full bg-transparent text-center font-mono text-2xl font-bold text-ink outline-none placeholder:text-muted/70"
               placeholder="Untitled"
             />
@@ -211,8 +227,10 @@ export default function EditorPage() {
             </label>
             <textarea
               id="draft-body"
+              maxLength={1000000}
               value={html}
-              onChange={(e) => setHtml(e.target.value)}
+              disabled={!draftLoaded}
+              onChange={(e) => { setHtml(e.target.value); saveChange({ title, html: e.target.value, genres }); }}
               placeholder="Start writing your story, essay, poem, or review…"
               className="typescript mt-10 min-h-[58vh] w-full resize-y bg-transparent outline-none placeholder:text-muted/70"
             />
@@ -241,7 +259,7 @@ export default function EditorPage() {
               </div>
             </dl>
             <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              <span className={cx("h-1.5 w-1.5 rounded-full", status.startsWith("Saved") || status.startsWith("Backup restored") ? "bg-success" : "bg-muted")} />
               {status}
             </p>
           </section>

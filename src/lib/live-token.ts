@@ -26,3 +26,16 @@ export function readLiveToken(token: unknown): LiveIdentity | null {
     return null;
   }
 }
+
+export function signGuestToken(identity: LiveIdentity) {
+  if (!identity.id.startsWith("guest:")) throw new Error("Only guest identities can use a device session.");
+  return jwt.sign(identity, secret(), { audience: "workshop-guest-device", expiresIn: "365d" });
+}
+export function readGuestToken(token: unknown): LiveIdentity | null {
+  if (typeof token !== "string") return null;
+  try {
+    const value = jwt.verify(token, secret(), { audience: "workshop-guest-device", algorithms: ["HS256"] }) as jwt.JwtPayload;
+    return typeof value.id === "string" && value.id.startsWith("guest:") && typeof value.name === "string"
+      ? { id: value.id, name: value.name } : null;
+  } catch { return null; }
+}

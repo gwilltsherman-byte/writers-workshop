@@ -162,6 +162,7 @@ export function AppShell({ children }: AppShellProps) {
             <p className="mt-1">Set in Literata and Courier Prime.</p>
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-1">
+            <Link href="/install" className="py-2 transition-colors hover:text-ink">Install app</Link>
             <Link href="/stories" className="py-2 transition-colors hover:text-ink">Stories</Link>
             <Link href="/editor" className="py-2 transition-colors hover:text-ink">Write</Link>
             <Link href="/critique/short" className="py-2 transition-colors hover:text-ink">Critique</Link>

@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Courier_Prime, Literata } from "next/font/google";
 import { AuthProvider } from "@/contexts/auth";
+import { InstalledApp } from "@/components/InstalledApp";
 
 // Literata was drawn for long-form reading on screens: headings, interface
 // text and published stories.
@@ -39,6 +40,9 @@ export const metadata: Metadata = {
     template: "%s | Writers’ Workshop",
   },
   description,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Writers’ Workshop", statusBarStyle: "default" },
+  icons: { apple: "/app-icons/icon-180.png" },
   openGraph: {
     type: "website",
     siteName: "Writers’ Workshop",
@@ -65,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><InstalledApp />{children}</AuthProvider>
       </body>
     </html>
   );

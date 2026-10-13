@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const me = getSession();
+  const me = await getSession();
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   return NextResponse.json({ email: me.email, name: me.name });
 }

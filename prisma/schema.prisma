@@ -26,9 +26,12 @@ model User {
 model Room {
   id        String    @id @default(cuid())
   slug      String    @unique
-  type      String // "chat" | "doc" | "critique-short" | "critique-long" | "game6"
+  type      String // "chat:live" | "doc" | "critique:short" | "critique:long" | "game"
   createdAt DateTime  @default(now())
   messages  Message[]
+  memberIds String[] @default([])
+  state     Json     @default("{}")
+  updatedAt DateTime @updatedAt
 }
 
 model Message {
@@ -39,6 +42,15 @@ model Message {
   createdAt DateTime @default(now())
   room      Room     @relation(fields: [roomId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model MatchQueue {
+  playerId String @id
+  mode String
+  payload Json @default("{}")
+  createdAt DateTime @default(now())
+  seenAt DateTime @default(now())
+  @@index([mode, createdAt])
 }
 
 model Document {
@@ -171,6 +183,7 @@ model VerifyCode {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+  attempts  Int       @default(0)
 
   @@index([email])
 }

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // Used by the Profile page.
 export async function GET() {
-  const me = getSession();
+  const me = await getSession();
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const stories = await prisma.story.findMany({

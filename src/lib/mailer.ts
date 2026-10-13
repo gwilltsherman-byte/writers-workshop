@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 
@@ -18,13 +19,13 @@ export function getTransport(): Transport | null {
     auth: process.env.SMTP_USER
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
       : undefined,
-    secure: false,
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
   }) as Transport;
   return g.__wwSmtp;
 }
 
 export function makeSixDigitCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000,1000000));
 }
 
 export function hashCode(code: string): Promise<string> {
@@ -54,7 +55,6 @@ export async function sendCode(opts: {
     });
     return { sent: true };
   }
-  // eslint-disable-next-line no-console
-  console.log(`[auth] DEV code for ${opts.to}: ${opts.code}`);
-  return { sent: false, devCode: process.env.NODE_ENV === "production" ? undefined : opts.code };
+  if (process.env.NODE_ENV === "production") throw new Error("Email service is not configured.");
+  return { sent: false, devCode: process.env.NODE_ENV === "development" ? opts.code : undefined };
 }

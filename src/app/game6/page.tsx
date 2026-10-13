@@ -1,210 +1,293 @@
 "use client";
-
 import React, { useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
 import { AppShell } from "@/components/shell";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, Notice } from "@/components/ui";
 import { IndexCard } from "@/components/IndexCard";
-import RealtimeNotice from "@/components/RealtimeNotice";
-import { useRealtime } from "@/lib/realtime";
-import type { GamePrompt } from "@/lib/prompts";
-
-const SAVE_KEY = "session:game6";
-const ROOM = "game:main";
-
-export default function Game6Page() {
-  const rt = useRealtime();
-  const socketRef = useRef<Socket | null>(null);
-  // Read inside socket handlers, so the socket doesn't have to reconnect when it changes.
-  const roleRef = useRef<number | null>(null);
-
-  const [joined, setJoined] = useState(false);
-  const [resumeAvailable, setResumeAvailable] = useState(false);
-  const [lobby, setLobby] = useState<{ count: number; players: string[] }>({ count: 0, players: [] });
-  const [role, setRole] = useState<number | null>(null);
-  const [phase, setPhase] = useState<"lobby" | "writing" | "voting" | "results">("lobby");
-  const [pair, setPair] = useState<[number, number] | null>(null);
-  const [prompt, setPrompt] = useState<GamePrompt | null>(null);
-  const [roundIndex, setRoundIndex] = useState(0);
-  const [writingEndsAt, setWritingEndsAt] = useState<number | null>(null);
-  const [myDraft, setMyDraft] = useState("");
-  const [drafts, setDrafts] = useState<Record<number, string>>({});
-  const [tally, setTally] = useState<Record<number, number>>({});
-  const [score, setScore] = useState<Record<number, number>>({});
-  const [canWrite, setCanWrite] = useState(false);
-  const [, setTick] = useState(0);
-
-  useEffect(() => { const id = setInterval(() => setTick((x) => x + 1), 1000); return () => clearInterval(id); }, []);
-  const timeLeft = writingEndsAt ? Math.max(0, Math.floor((writingEndsAt - Date.now()) / 1000)) : 0;
-  const mmss = `${String(Math.floor(timeLeft / 60)).padStart(2, "0")}:${String(timeLeft % 60).padStart(2, "0")}`;
-
+import { useLiveRoom, useLiveClock } from "@/lib/live-client";
+export default function GamePage() {
+  const { snapshot, connected, error, busy, act } = useLiveRoom("game");
+  const [draft, setDraft] = useState("");
+  const [share, setShare] = useState("");
+  const now = useLiveClock(snapshot?.serverTime);
+  const restoredRound = useRef("");
+  const g = snapshot?.state?.kind === "game" ? snapshot.state : null;
+  const me = g?.players.find((p) => p.id === snapshot?.identity.id);
+  const writing =
+    !!me &&
+    g?.phase === "writing" &&
+    !!g.pair?.includes(me.role) &&
+    !g.submitted.includes(me.id);
+  const canVote =
+    !!me &&
+    g?.phase === "voting" &&
+    (g.players.length === 2 || !g.pair?.includes(me.role)) &&
+    g.votes[me.id] === undefined;
+  const left = g?.endsAt ? Math.max(0, Math.ceil((g.endsAt - now) / 1000)) : 0;
   useEffect(() => {
-    try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const st = JSON.parse(raw); if (st?.joined) setResumeAvailable(true); } } catch {}
-  }, []);
-
+    const key = `${snapshot?.room}:${g?.phase}:${g?.roundIndex}:${me?.role}`;
+    if (restoredRound.current !== key) {
+      restoredRound.current = key;
+      setDraft(g?.drafts[me?.role || 0] || "");
+    }
+  }, [g, me?.role, snapshot?.room]);
   useEffect(() => {
-    if (rt.status !== "enabled") return;
-    const s = io(rt.url || undefined); socketRef.current = s;
-
-    s.on("game:lobby", (p) => setLobby(p));
-    s.on("game:role", (p: { role: number }) => { roleRef.current = p.role; setRole(p.role); });
-    s.on("game:phase", (p: any) => {
-      setPhase(p.phase);
-      setPrompt(p.prompt || null);
-      setRoundIndex(p.roundIndex || 0);
-      if (p.phase === "writing") {
-        setPair(p.pair); setWritingEndsAt(p.writingEndsAt || null);
-        setDrafts(p.drafts || {}); setTally({}); setScore(p.score || {});
-        setCanWrite(roleRef.current ? Boolean(p.pair?.includes(roleRef.current)) : false);
-      } else if (p.phase === "voting") {
-        setPair(p.pair); setDrafts(p.drafts || {}); setTally(p.tally || {}); setScore(p.score || {}); setCanWrite(false);
-      }
-      if (p.score) setScore(p.score);
-    });
-    s.on("game:active", ({ active }: { active: boolean }) => setCanWrite(active));
-    s.on("game:typing", ({ role, text }: { role: number; text: string }) => setDrafts((d) => ({ ...d, [role]: text })));
-    s.on("game:tally", ({ tally }: { tally: Record<number, number> }) => setTally(tally));
-    s.on("game:results", ({ score }: { score: Record<number, number> }) => { setPhase("results"); setScore(score || {}); setCanWrite(false); });
-
-    return () => { s.close(); };
-  }, [rt.status, rt.url]);
-
-  function join() {
-    socketRef.current?.emit("game:join", { room: ROOM, name: "You" });
-    setJoined(true); setResumeAvailable(false);
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ joined: true })); } catch {}
+    if (!writing || !draft) return;
+    const t = setTimeout(() => {
+      void act("draft", { text: draft });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [draft, writing, act]);
+  async function invite() {
+    const s = await act("create");
+    if (s?.room)
+      setShare(`${location.origin}/game6?room=${encodeURIComponent(s.room)}`);
   }
-  function leave() {
-    socketRef.current?.emit("game:leave", { room: ROOM });
-    roleRef.current = null;
-    setJoined(false); setRole(null); setPhase("lobby"); setPair(null); setPrompt(null); setDrafts({}); setTally({}); setScore({}); setCanWrite(false);
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
-  }
-  function startNow() { socketRef.current?.emit("game:start", { room: ROOM }); }
-  function onType(val: string) { setMyDraft(val); if (phase === "writing" && canWrite) socketRef.current?.emit("game:typing", { room: ROOM, text: val }); }
-  function vote(r: number) { socketRef.current?.emit("game:vote", { room: ROOM, voteForRole: r }); }
-
-  const promptBox = prompt && (
-    <IndexCard label={`Round ${roundIndex + 1} of 3`} cardKey={roundIndex} className="mt-5 max-w-2xl">
-      <p>{prompt.text}</p>
-      {prompt.twist && <p><span className="font-bold">The catch:</span> {prompt.twist}</p>}
-      {prompt.bonus && (
-        <p>
-          <span className="font-bold">Bonus word, if you can fit it in:</span> {prompt.bonus.word}{" "}
-          <span className="text-muted">({prompt.bonus.meaning})</span>
-        </p>
-      )}
-    </IndexCard>
-  );
-
-  const Draft = ({ r }: { r: number }) => (
-    <div className="rounded border border-line bg-surface-raised p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-xs font-semibold text-paper">{r}</span>
-        <span className="text-sm font-medium text-ink-soft">Writer {r}</span>
-      </div>
-      <div className="min-h-[9rem] whitespace-pre-wrap font-mono text-[0.9375rem] leading-7 text-ink">{drafts[r] || <span className="text-muted">…</span>}</div>
+  const names = (role: number) =>
+    g?.players.find((p) => p.role === role)?.name || `Writer ${role}`;
+  const piece = (r: number) => (
+    <div key={r} className="card p-5">
+      <h3 className="font-semibold">{names(r)}</h3>
+      <p className="mt-3 min-h-36 whitespace-pre-wrap break-words font-mono">
+        {g?.drafts[r] || "Waiting for a piece…"}
+      </p>
     </div>
   );
-
   return (
     <AppShell>
-      <PageHeader title="The writing game" description="Six writers, three rounds. Each round, two of you get a fresh prompt and five minutes to write, and the other four vote for the piece they like best." />
-
-      {rt.status === "checking" && <div className="h-40 animate-pulse rounded bg-surface-sunken" aria-hidden />}
-      {rt.status === "disabled" && <RealtimeNotice feature="The writing game" />}
-
-      {rt.status === "enabled" && (
+      <PageHeader
+        title="The writing game"
+        description="Two to six writers, three prompts. Write, compare your pieces, and vote together."
+      />
+      {error && <Notice tone="danger">{error}</Notice>}
+      <p className="mb-4 text-sm text-muted">
+        {connected
+          ? `Playing as ${snapshot?.identity.name}`
+          : "Connecting to the workshop…"}
+      </p>
+      {!g ? (
+        <div className="max-w-3xl border-t-2 border-ink pt-6">
+          <h2 className="text-2xl font-semibold">Find a game</h2>
+          <p className="mt-2 text-ink-soft">
+            Join other writers, or create a room and share its link with
+            friends.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              onClick={() => act("join")}
+              disabled={!connected || busy}
+              className="btn-accent"
+            >
+              Join lobby
+            </button>
+            <button
+              onClick={invite}
+              disabled={!connected || busy}
+              className="btn-secondary"
+            >
+              Create a room
+            </button>
+          </div>
+        </div>
+      ) : (
         <div className="max-w-4xl space-y-4">
-          {!joined && (
-            <div className="border-t-2 border-ink pt-6">
-              <h2 className="text-2xl font-semibold text-ink">Join the lobby</h2>
-              <p className="mt-2 text-ink-soft">The game begins automatically once six writers are in.</p>
-              <div className="mt-6 flex gap-2">
-                <button onClick={join} className="btn-accent px-6">Join lobby</button>
-                {resumeAvailable && <button onClick={join} className="btn-secondary px-5">Rejoin</button>}
-              </div>
-            </div>
-          )}
-
-          {joined && phase === "lobby" && (
+          <div className="flex flex-wrap items-center gap-3 border-y border-line py-3">
+            <span className="badge">
+              {me?.role ? `You’re Writer ${me.role}` : "Lobby"}
+            </span>
+            <span className="text-sm text-muted">
+              {g.players.filter((p) => !p.left).length} writers
+            </span>
+            {g.endsAt && (
+              <span
+                role="timer"
+                aria-label="Time left"
+                className="ml-auto font-mono text-lg font-bold"
+              >
+                {String(Math.floor(left / 60)).padStart(2, "0")}:
+                {String(left % 60).padStart(2, "0")}
+              </span>
+            )}
+            <button className="btn-ghost ml-auto" onClick={() => act("leave")}>
+              Leave
+            </button>
+          </div>
+          {g.phase === "lobby" && (
             <div className="card p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="font-serif text-lg font-semibold text-ink">Lobby</h2>
-                <span className="font-mono tabular-nums text-ink-soft">{lobby.count} / 6</span>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {lobby.players.map((p, i) => <span key={i} className="tag">{p}</span>)}
-                {Array.from({ length: Math.max(0, 6 - lobby.count) }).map((_, i) => (
-                  <span key={`e${i}`} className="tag border-dashed text-muted">waiting…</span>
+              <h2 className="text-xl font-semibold">
+                Lobby · {g.players.length} / 6
+              </h2>
+              <div className="my-4 flex flex-wrap gap-2">
+                {g.players.map((p) => (
+                  <span key={p.id} className="tag">
+                    {p.name}
+                  </span>
                 ))}
               </div>
-              <div className="mt-5 flex items-center gap-2">
-                <button onClick={startNow} disabled={lobby.count < 6} className="btn-primary px-4">Start now</button>
-                <button onClick={leave} className="btn-ghost px-4">Leave</button>
-              </div>
-            </div>
-          )}
-
-          {joined && phase === "writing" && (
-            <div>
-              <div className="flex flex-wrap items-center gap-3 border-b border-line pb-4">
-                <span className="badge">{role ? `You’re Writer ${role}` : "Finding your seat…"}</span>
-                <span className="text-sm text-ink-soft">This round: <span className="font-medium text-ink">{pair ? `Writer ${pair[0]} vs Writer ${pair[1]}` : "waiting…"}</span></span>
-                <span role="timer" aria-label="Time left" className={`ml-auto rounded px-3 py-1 font-mono text-lg font-bold tabular-nums ${timeLeft <= 30 ? "bg-danger/10 text-danger" : "text-ink"}`}>{mmss}</span>
-              </div>
-
-              {promptBox}
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <Draft r={pair?.[0] ?? 0} />
-                <Draft r={pair?.[1] ?? 0} />
-              </div>
-
-              {canWrite ? (
+              <p className="text-sm text-muted">
+                Start with at least two writers. A public lobby starts
+                automatically at six. With two players, both of you vote; tied
+                votes give each writer a point.
+              </p>
+              <button
+                disabled={busy || g.players.length < 2}
+                onClick={() => act("start")}
+                className="btn-primary mt-4"
+              >
+                Start now
+              </button>
+              <button
+                onClick={() =>
+                  setShare(
+                    `${location.origin}/game6?room=${encodeURIComponent(snapshot!.room!)}`,
+                  )
+                }
+                className="btn-secondary ml-3"
+              >
+                Share game link
+              </button>
+              {share && (
                 <div className="mt-4">
-                  <p className="mb-2 text-sm font-medium text-ink">You’re writing this round</p>
-                  <textarea aria-label="Your piece" className="field typescript min-h-[11rem]" value={myDraft} onChange={(e) => onType(e.target.value)} placeholder="Write your piece…" />
+                  <label className="text-sm" htmlFor="game-invite">
+                    Send this link to your friends
+                  </label>
+                  <input
+                    id="game-invite"
+                    readOnly
+                    value={share}
+                    onFocus={(e) => e.target.select()}
+                    className="field mt-2"
+                  />
                 </div>
-              ) : (
-                <p className="mt-4 text-sm text-muted">You’re sitting this round out. Read along and get ready to vote.</p>
               )}
             </div>
           )}
-
-          {joined && phase === "voting" && pair && (
-            <div>
-              <h2 className="border-b border-line pb-4 text-xl font-semibold text-ink">Vote: Writer {pair[0]} vs Writer {pair[1]}</h2>
-              {promptBox}
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <Draft r={pair[0]} />
-                <Draft r={pair[1]} />
+          {(g.phase === "writing" || g.phase === "voting") && (
+            <>
+              <IndexCard
+                label={`Round ${g.roundIndex + 1} of 3`}
+                cardKey={g.roundIndex}
+              >
+                <p>{g.prompt?.text}</p>
+                {g.prompt?.twist && (
+                  <p>
+                    <strong>The catch:</strong> {g.prompt.twist}
+                  </p>
+                )}
+              </IndexCard>
+              <div className="grid gap-4 md:grid-cols-2">
+                {g.pair?.map(piece)}
               </div>
-              {role && !pair.includes(role) ? (
-                <div className="mt-4 flex gap-2">
-                  <button onClick={() => vote(pair[0])} className="btn-primary flex-1">Vote Writer {pair[0]}</button>
-                  <button onClick={() => vote(pair[1])} className="btn-primary flex-1">Vote Writer {pair[1]}</button>
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-muted">Writers can’t vote in their own round.</p>
-              )}
-              <div className="mt-3 text-sm text-muted">Tally: {Object.entries(tally).map(([k, v]) => `${k}:${v}`).join("  ") || "no votes yet"}</div>
-            </div>
-          )}
-
-          {joined && phase === "results" && (
-            <div className="card-raised p-6">
-              <h2 className="font-serif text-xl font-semibold text-ink">Results</h2>
-              <div className="mt-4 divide-y divide-line border-y border-line">
-                {[1, 2, 3, 4, 5, 6].sort((a, b) => (score[b] || 0) - (score[a] || 0)).map((r, i) => (
-                  <div key={r} className="flex items-center gap-3 py-2.5">
-                    <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-semibold ${i === 0 ? "bg-gold text-paper" : "bg-surface-sunken text-ink-soft"}`}>{i + 1}</span>
-                    <span className="text-ink">Writer {r}</span>
-                    <span className="ml-auto font-semibold tabular-nums text-ink">{score[r] || 0} pts</span>
+              {g.phase === "writing" &&
+                (writing ? (
+                  <div>
+                    <label className="font-semibold" htmlFor="game-piece">
+                      Your piece
+                    </label>
+                    <textarea
+                      id="game-piece"
+                      className="field typescript mt-2 min-h-44"
+                      value={draft}
+                      maxLength={10000}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder="Write your piece…"
+                    />
+                    <div className="mt-3 flex gap-3">
+                      <button
+                        disabled={busy || !draft.trim()}
+                        onClick={() => act("submit", { text: draft })}
+                        className="btn-primary"
+                      >
+                        Submit piece
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => act("draft", { text: draft })}
+                        className="btn-secondary"
+                      >
+                        Save draft
+                      </button>
+                    </div>
+                    <p className="mt-2 text-sm text-muted">
+                      Both submissions start voting immediately. The timer also
+                      saves the round when it runs out.
+                    </p>
                   </div>
+                ) : (
+                  <p className="text-sm text-muted">
+                    {me && g.submitted.includes(me.id)
+                      ? "Your piece is submitted. Waiting for the other writer."
+                      : "Read along. You’ll vote when both pieces are ready."}
+                  </p>
                 ))}
+              {g.phase === "voting" &&
+                (canVote ? (
+                  <div className="flex flex-wrap gap-3">
+                    {g.pair?.map((r) => (
+                      <button
+                        key={r}
+                        disabled={busy}
+                        onClick={() =>
+                          act("vote", { role: r, roundIndex: g.roundIndex })
+                        }
+                        className="btn-primary"
+                      >
+                        Vote for {names(r)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">
+                    {me && g.votes[me.id] !== undefined
+                      ? "Your vote is saved. Waiting for the remaining votes."
+                      : "The other writers are voting this round."}
+                  </p>
+                ))}
+            </>
+          )}
+          {g.phase === "results" && (
+            <div className="card-raised p-6">
+              <h2 className="text-2xl font-semibold">Results</h2>
+              <div className="my-5 divide-y divide-line">
+                {[...g.players]
+                  .sort(
+                    (a, b) => (g.score[b.role] || 0) - (g.score[a.role] || 0),
+                  )
+                  .map((p) => (
+                    <div key={p.id} className="flex justify-between py-3">
+                      <span>{p.name}</span>
+                      <strong>{g.score[p.role] || 0} pts</strong>
+                    </div>
+                  ))}
               </div>
-              <button onClick={leave} className="btn-secondary mt-5 px-5">Leave</button>
+              <button
+                disabled={busy}
+                onClick={() => act("start")}
+                className="btn-primary"
+              >
+                Play again
+              </button>
+              {g.roundResults.map((r, i) => (
+                <details key={i} className="mt-4 border-t border-line pt-3">
+                  <summary>
+                    Round {i + 1} ·{" "}
+                    {r.winners.length === 2
+                      ? "Draw"
+                      : r.winners.length
+                        ? `${names(r.winners[0])} won`
+                        : "No votes"}
+                  </summary>
+                  <div className="mt-3 grid gap-4 md:grid-cols-2">
+                    {r.pair.map((role) => (
+                      <div key={role}>
+                        <strong>{names(role)}</strong>
+                        <p className="mt-2 whitespace-pre-wrap break-words">
+                          {r.drafts[role] || "No piece submitted."}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ))}
             </div>
           )}
         </div>

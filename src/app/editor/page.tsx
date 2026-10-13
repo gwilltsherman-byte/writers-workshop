@@ -1,30 +1,42 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { io } from "socket.io-client";
 import { AppShell } from "@/components/shell";
 import { cx, Icon, Notice } from "@/components/ui";
 import { useAuth } from "@/contexts/auth";
-import { useRealtime } from "@/lib/realtime";
 
-const categories = ["Fiction", "Fantasy", "Sci-Fi", "Poetry", "Essay", "Mystery", "Romance", "Non-fiction", "Horror", "Humor"];
+const categories = [
+  "Fiction",
+  "Fantasy",
+  "Sci-Fi",
+  "Poetry",
+  "Essay",
+  "Mystery",
+  "Romance",
+  "Non-fiction",
+  "Horror",
+  "Humor",
+];
 const STORAGE_KEY = "ww-editor-draft";
 
 export default function EditorPage() {
-  const rt = useRealtime();
   const { me } = useAuth();
-  const socketRef = useRef<ReturnType<typeof io> | null>(null);
-  const [room] = useState("doc:global");
   const [title, setTitle] = useState("");
   const [html, setHtml] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("Saved in this browser");
-  const [notice, setNotice] = useState<{ tone: "success" | "danger"; text: React.ReactNode } | null>(null);
+  const [notice, setNotice] = useState<{
+    tone: "success" | "danger";
+    text: React.ReactNode;
+  } | null>(null);
   const [prompt, setPrompt] = useState<string | null>(null);
 
-  const wordCount = useMemo(() => html.trim().split(/\s+/).filter(Boolean).length, [html]);
+  const wordCount = useMemo(
+    () => html.trim().split(/\s+/).filter(Boolean).length,
+    [html],
+  );
   const charCount = html.length;
   const readTime = Math.max(1, Math.ceil(wordCount / 220));
   // Manuscript convention: past a hundred words, round to the nearest hundred.
@@ -47,7 +59,10 @@ export default function EditorPage() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, html, genres }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ title, html, genres }),
+      );
       setStatus("Saved in this browser");
     } catch {}
   }, [title, html, genres]);
@@ -65,22 +80,12 @@ export default function EditorPage() {
     window.history.replaceState(null, "", url);
   }
 
-  useEffect(() => {
-    if (rt.status !== "enabled") return;
-    const s = io(rt.url || undefined);
-    socketRef.current = s;
-    s.emit("join", { room, name: "Editor" });
-    return () => { s.close(); };
-  }, [room, rt.status, rt.url]);
-
-  function saveSnapshot() {
-    socketRef.current?.emit("doc:snapshot", { room, title, html });
-    setStatus("Snapshot sent to the collaborative room");
-  }
-
   async function publish() {
     if (!title.trim() || !html.trim()) {
-      setNotice({ tone: "danger", text: "Add a title and some writing before you publish." });
+      setNotice({
+        tone: "danger",
+        text: "Add a title and some writing before you publish.",
+      });
       return;
     }
     setNotice(null);
@@ -96,26 +101,47 @@ export default function EditorPage() {
       if (r.status === 401) {
         setNotice({
           tone: "danger",
-          text: <>You need to <Link href="/auth" className="underline">log in</Link> to publish. Your draft is still saved in this browser.</>,
+          text: (
+            <>
+              You need to{" "}
+              <Link href="/auth" className="underline">
+                log in
+              </Link>{" "}
+              to publish. Your draft is still saved in this browser.
+            </>
+          ),
         });
         return;
       }
       if (!r.ok) throw new Error();
       setNotice({
         tone: "success",
-        text: j?.id
-          ? <>Published. <Link href={`/stories/${j.id}`} className="underline">Read it in Stories</Link>.</>
-          : "Published to Stories.",
+        text: j?.id ? (
+          <>
+            Published.{" "}
+            <Link href={`/stories/${j.id}`} className="underline">
+              Read it in Stories
+            </Link>
+            .
+          </>
+        ) : (
+          "Published to Stories."
+        ),
       });
     } catch {
-      setNotice({ tone: "danger", text: "Publishing didn’t work. Your draft is safe here; try again in a moment." });
+      setNotice({
+        tone: "danger",
+        text: "Publishing didn’t work. Your draft is safe here; try again in a moment.",
+      });
     } finally {
       setSaving(false);
     }
   }
 
   function toggle(cat: string) {
-    setGenres((g) => (g.includes(cat) ? g.filter((x) => x !== cat) : [...g, cat]));
+    setGenres((g) =>
+      g.includes(cat) ? g.filter((x) => x !== cat) : [...g, cat],
+    );
   }
 
   return (
@@ -123,18 +149,35 @@ export default function EditorPage() {
       <div className="grid gap-10 lg:grid-cols-[1fr_15rem] lg:gap-14">
         <section className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-            {rt.status === "enabled" && (
-              <button onClick={saveSnapshot} className="btn-secondary">Save snapshot</button>
-            )}
-            <button onClick={publish} disabled={saving} className="btn-accent px-5">{saving ? "Publishing…" : "Publish"}</button>
+            <Link href="/collaborate" className="btn-secondary">
+              Write together
+            </Link>
+            <button
+              onClick={publish}
+              disabled={saving}
+              className="btn-accent px-5"
+            >
+              {saving ? "Publishing…" : "Publish"}
+            </button>
           </div>
 
-          {notice && <div className="mb-4"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
+          {notice && (
+            <div className="mb-4">
+              <Notice tone={notice.tone}>{notice.text}</Notice>
+            </div>
+          )}
 
           {prompt && (
             <div className="mb-4 flex items-start gap-3 border-l-2 border-accent bg-surface-sunken py-2 pl-4 pr-1 leading-7 text-ink-soft">
-              <p className="flex-1 py-1"><span className="font-semibold text-ink">Your prompt:</span> {prompt}</p>
-              <button onClick={dismissPrompt} aria-label="Dismiss prompt" className="grid h-11 w-11 shrink-0 place-items-center rounded text-muted transition-colors hover:text-ink">
+              <p className="flex-1 py-1">
+                <span className="font-semibold text-ink">Your prompt:</span>{" "}
+                {prompt}
+              </p>
+              <button
+                onClick={dismissPrompt}
+                aria-label="Dismiss prompt"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded text-muted transition-colors hover:text-ink"
+              >
                 <Icon name="close" />
               </button>
             </div>
@@ -147,7 +190,9 @@ export default function EditorPage() {
               <span className="shrink-0 tabular-nums">{manuscriptCount}</span>
             </div>
 
-            <label htmlFor="draft-title" className="sr-only">Title</label>
+            <label htmlFor="draft-title" className="sr-only">
+              Title
+            </label>
             <input
               id="draft-title"
               value={title}
@@ -155,9 +200,15 @@ export default function EditorPage() {
               className="mt-12 w-full bg-transparent text-center font-mono text-2xl font-bold text-ink outline-none placeholder:text-muted/70"
               placeholder="Untitled"
             />
-            {me?.name && <p className="mt-2 text-center font-mono text-muted">by {me.name}</p>}
+            {me?.name && (
+              <p className="mt-2 text-center font-mono text-muted">
+                by {me.name}
+              </p>
+            )}
 
-            <label htmlFor="draft-body" className="sr-only">Your writing</label>
+            <label htmlFor="draft-body" className="sr-only">
+              Your writing
+            </label>
             <textarea
               id="draft-body"
               value={html}
@@ -172,9 +223,22 @@ export default function EditorPage() {
           <section>
             <h2 className="text-base font-semibold text-ink">This draft</h2>
             <dl className="mt-3 divide-y divide-line border-y border-line text-[0.9375rem]">
-              <div className="flex justify-between py-2"><dt className="text-ink-soft">Words</dt><dd className="tabular-nums text-ink">{wordCount.toLocaleString()}</dd></div>
-              <div className="flex justify-between py-2"><dt className="text-ink-soft">Reading time</dt><dd className="tabular-nums text-ink">{readTime} min</dd></div>
-              <div className="flex justify-between py-2"><dt className="text-ink-soft">Characters</dt><dd className="tabular-nums text-ink">{charCount.toLocaleString()}</dd></div>
+              <div className="flex justify-between py-2">
+                <dt className="text-ink-soft">Words</dt>
+                <dd className="tabular-nums text-ink">
+                  {wordCount.toLocaleString()}
+                </dd>
+              </div>
+              <div className="flex justify-between py-2">
+                <dt className="text-ink-soft">Reading time</dt>
+                <dd className="tabular-nums text-ink">{readTime} min</dd>
+              </div>
+              <div className="flex justify-between py-2">
+                <dt className="text-ink-soft">Characters</dt>
+                <dd className="tabular-nums text-ink">
+                  {charCount.toLocaleString()}
+                </dd>
+              </div>
             </dl>
             <p className="mt-3 flex items-center gap-2 text-sm text-muted">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -187,23 +251,17 @@ export default function EditorPage() {
             <p className="mt-1 text-sm text-muted">Pick what fits your work.</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {categories.map((c) => (
-                <button key={c} onClick={() => toggle(c)} aria-pressed={genres.includes(c)} className={cx("chip", genres.includes(c) && "chip-active")}>
+                <button
+                  key={c}
+                  onClick={() => toggle(c)}
+                  aria-pressed={genres.includes(c)}
+                  className={cx("chip", genres.includes(c) && "chip-active")}
+                >
                   {c}
                 </button>
               ))}
             </div>
           </section>
-
-          {rt.status === "disabled" && (
-            <section>
-              <h2 className="text-base font-semibold text-ink">Solo mode</h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted">
-                Live collaboration is switched off on this site, but you can still write and publish
-                as usual. Your draft saves automatically in this browser.{" "}
-                <Link href="/library" className="text-ink-soft underline decoration-line-strong hover:text-ink">View library</Link>.
-              </p>
-            </section>
-          )}
         </aside>
       </div>
     </AppShell>

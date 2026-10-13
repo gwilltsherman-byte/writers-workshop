@@ -21,10 +21,10 @@ export function signSession(user: SessionUser): string {
 }
 
 /** Read + verify the session cookie for the current request (server only). */
-export function getSession(): SessionUser | null {
+export async function getSession(): Promise<SessionUser | null> {
   if (!SECRET) return null;
   try {
-    const token = cookies().get(SESSION_COOKIE)?.value;
+    const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (!token) return null;
     const payload = jwt.verify(token, SECRET) as jwt.JwtPayload & Partial<SessionUser>;
     if (!payload?.userId || !payload.email || !payload.name) return null;
@@ -46,4 +46,3 @@ export function sessionCookieOptions(maxAge: number) {
 }
 
 export const setSessionCookieValue = MAX_AGE_SECONDS;
-

@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-if curl --fail --silent http://localhost:3000/healthz >/dev/null; then exit 0; fi
+if curl --fail --silent http://localhost:3000/api/health >/dev/null; then exit 0; fi
 if [ -n "${CODESPACE_NAME:-}" ]; then
   export APP_BASE_URL="https://${CODESPACE_NAME}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:-app.github.dev}"
 fi

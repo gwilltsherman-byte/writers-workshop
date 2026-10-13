@@ -1,0 +1,187 @@
+generator client {
+  provider      = "prisma-client-js"
+  // "native" for local dev; the rhel targets are for Netlify Functions (AWS
+  // Lambda) so the query engine binary matches that runtime.
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String        @id @default(cuid())
+  name            String        @unique
+  createdAt       DateTime      @default(now())
+  messages        Message[]
+  email           String        @unique
+  passwordHash    String?
+  emailVerifiedAt DateTime?
+  verifyCode      String?
+  emailChanges    EmailChange[]
+  docs            MyDoc[] // added (safe even if unused today)
+}
+
+model Room {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  type      String // "chat" | "doc" | "critique-short" | "critique-long" | "game6"
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  roomSlug  String   @unique
+  title     String
+  html      String
+  updatedAt DateTime @updatedAt
+}
+
+model CritiqueSession {
+  id        String             @id @default(cuid())
+  type      String // "short" | "long"
+  roomSlug  String             @unique
+  hostName  String
+  endAt     DateTime
+  createdAt DateTime           @default(now())
+  pieces    CritiquePiece[]
+  feedback  CritiqueFeedback[]
+}
+
+model CritiquePiece {
+  id        String          @id @default(cuid())
+  sessionId String
+  author    String
+  text      String
+  createdAt DateTime        @default(now())
+  session   CritiqueSession @relation(fields: [sessionId], references: [id])
+}
+
+model CritiqueFeedback {
+  id        String          @id @default(cuid())
+  sessionId String
+  fromName  String
+  toName    String
+  text      String
+  createdAt DateTime        @default(now())
+  session   CritiqueSession @relation(fields: [sessionId], references: [id])
+}
+
+model GameSession {
+  id            String         @id @default(cuid())
+  roomSlug      String         @unique
+  phase         String // "lobby" | "writing" | "voting" | "results"
+  prompts       Json
+  writingEndsAt DateTime?
+  votingIndex   Int            @default(0)
+  createdAt     DateTime       @default(now())
+  players       GamePlayer[]
+  responses     GameResponse[]
+  votes         GameVote[]
+}
+
+model GamePlayer {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      Int
+  name      String
+  session   GameSession @relation(fields: [sessionId], references: [id])
+}
+
+model GameResponse {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      Int
+  text      String
+  createdAt DateTime    @default(now())
+  session   GameSession @relation(fields: [sessionId], references: [id])
+}
+
+model GameVote {
+  id          String      @id @default(cuid())
+  sessionId   String
+  pairIndex   Int
+  voterName   String
+  voteForRole Int
+  createdAt   DateTime    @default(now())
+  session     GameSession @relation(fields: [sessionId], references: [id])
+}
+
+model Story {
+  id          String   @id @default(cuid())
+  title       String
+  html        String
+  excerpt     String?
+  genres      String[]
+  authorName  String
+  authorEmail String? // added so “My Library” can query by account
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  publishedAt DateTime @default(now())
+
+  @@index([publishedAt])
+  @@index([authorName])
+  @@index([authorEmail])
+}
+
+model MyDoc {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?
+  html      String?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailChange {
+  id        Int       @id @default(autoincrement())
+  userId    String
+  newEmail  String    @db.VarChar(255)
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, newEmail])
+  @@index([newEmail])
+}
+
+model VerifyCode {
+  id        Int       @id @default(autoincrement())
+  email     String    @db.VarChar(255)
+  codeHash  String
+  purpose   String // "signup" | "email-change" | "reset"
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}

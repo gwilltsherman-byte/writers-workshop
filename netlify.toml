@@ -1,0 +1,20 @@
+# Netlify configuration for Writers' Workshop (Next.js).
+#
+# The official Next.js runtime turns pages and /api route handlers into
+# serverless functions. The realtime layer (Socket.IO + Yjs in server/index.ts)
+# is NOT deployed here, because Netlify is serverless and can't host a socket server.
+# Realtime pages detect the missing server and show a graceful notice; to enable
+# them, run the realtime server on an always-on host and set
+# NEXT_PUBLIC_REALTIME_URL in the Netlify environment.
+
+[build]
+  command = "prisma generate && next build"
+  # The Next.js runtime plugin sets the publish directory itself.
+  # Migrations are applied out-of-band with `prisma migrate deploy` against the
+  # direct (non-pooler) Neon URL. The pooler can't hold Prisma's migration lock.
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Design tokens: bond paper, ribbon black, ribbon red, and the
+   blue rule of an index card. Built in OKLCH (see DESIGN.md) and
+   stored as `R G B` triplets consumed by tailwind.config.ts.
+   ============================================================ */
+:root {
+  --paper: 250 249 246;          /* page: bond paper */
+  --surface: 253 253 250;        /* panels */
+  --surface-raised: 255 255 255; /* index cards, dialogs */
+  --surface-sunken: 242 240 236; /* wells, skeletons */
+
+  --ink: 32 27 23;               /* ribbon black */
+  --ink-soft: 73 68 64;          /* secondary text */
+  --muted: 104 98 94;            /* captions, meta */
+
+  --line: 226 223 218;           /* hairlines */
+  --line-strong: 193 189 183;    /* input borders */
+
+  --accent: 192 45 34;           /* ribbon red / editor's pencil */
+  --accent-hover: 165 32 24;
+  --accent-soft: 255 235 232;
+  --accent-ink: 255 252 252;     /* text on accent */
+
+  --rule: 168 201 226;           /* index-card blue rule */
+  --gold: 173 124 47;
+  --success: 51 115 68;
+  --danger: 179 35 34;
+
+  --shadow: 41 31 24;
+}
+
+/* Dark: carbon paper rather than an inverted page. */
+.dark {
+  --paper: 23 20 18;
+  --surface: 30 27 25;
+  --surface-raised: 37 34 31;
+  --surface-sunken: 19 16 14;
+
+  --ink: 236 233 228;
+  --ink-soft: 202 199 194;
+  --muted: 159 155 149;
+
+  --line: 54 50 47;
+  --line-strong: 79 73 69;
+
+  --accent: 237 119 97;
+  --accent-hover: 248 144 124;
+  --accent-soft: 65 33 29;
+  --accent-ink: 26 14 12;
+
+  --rule: 51 81 102;
+  --gold: 220 175 97;
+  --success: 124 189 137;
+  --danger: 244 124 112;
+
+  --shadow: 0 0 0;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-paper font-serif text-ink antialiased;
+  }
+  h1, h2, h3, h4 { @apply font-serif tracking-tightish; text-wrap: balance; }
+  p { text-wrap: pretty; }
+  ::selection { background: rgb(var(--accent) / 0.2); }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
+  a { text-underline-offset: 3px; }
+}
+
+@layer components {
+  /* Surfaces --------------------------------------------------- */
+  .card {
+    @apply rounded border border-line bg-surface;
+  }
+  .card-raised {
+    @apply rounded border border-line bg-surface-raised;
+  }
+  .hairline { @apply border-b border-line; }
+
+  /* Buttons ---------------------------------------------------- */
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded px-4 py-2 text-[0.9375rem] font-medium
+           transition-colors duration-150 ease-out select-none
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-ink text-paper hover:bg-ink-soft active:bg-ink;
+  }
+  .btn-accent {
+    @apply btn bg-accent text-accent-ink hover:bg-accent-hover active:bg-accent;
+  }
+  .btn-secondary {
+    @apply btn border border-line-strong bg-transparent text-ink hover:border-ink-soft hover:bg-surface-sunken;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:bg-surface-sunken hover:text-ink;
+  }
+  /* A plain text link that reads as the page's next step. */
+  .link-accent {
+    @apply font-medium text-accent underline decoration-accent/30 underline-offset-4 transition-colors
+           hover:text-accent-hover hover:decoration-accent-hover;
+  }
+
+  /* Inputs ----------------------------------------------------- */
+  .field {
+    @apply w-full rounded border border-line-strong bg-surface-raised px-3.5 py-2.5 text-[0.9375rem] text-ink
+           placeholder:text-muted outline-none transition-colors duration-150
+           focus:border-ink-soft focus:ring-2 focus:ring-accent/20
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .label { @apply block text-sm font-medium text-ink-soft; }
+
+  /* Chips / tags: typed labels rather than pills -------------- */
+  .chip {
+    @apply inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded border border-line-strong px-3 py-1 text-sm
+           text-ink-soft transition-colors duration-150 hover:border-ink-soft hover:text-ink;
+  }
+  /* Same shape as a chip, for labels that aren't clickable. */
+  .tag {
+    @apply inline-flex min-h-9 items-center rounded border border-line-strong px-3 py-1 text-sm text-ink-soft;
+  }
+  .chip-active {
+    @apply border-ink bg-ink text-paper hover:border-ink hover:text-paper;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded border border-accent/30 bg-accent-soft px-2 py-0.5 text-sm text-accent;
+  }
+
+  /* Reading: published work is typeset ------------------------ */
+  .reader {
+    @apply font-serif text-[1.125rem] leading-[1.75] text-ink;
+  }
+  .reader p { margin: 0.85rem 0; }
+
+  /* Drafts are typewritten, double-spaced like a manuscript --- */
+  .typescript {
+    @apply font-mono text-[1.0625rem] leading-[2] text-ink;
+  }
+
+  /* Index card: the site's signature. A red headline rule over blue
+     ruled lines, with typed text sitting on the rules. --rule-gap is
+     the line height, so each line of type gets one rule. */
+  .index-card {
+    --rule-gap: 2rem;
+    @apply rounded border border-line bg-surface-raised shadow-card;
+  }
+  .index-card-head {
+    @apply px-6 pb-2 pt-4 text-[0.9375rem] italic text-muted;
+    border-bottom: 2px solid rgb(var(--accent) / 0.65);
+  }
+  .index-card-lines {
+    @apply px-6 pb-6 font-mono text-[1.125rem] text-ink;
+    padding-top: 0.5rem;
+    line-height: var(--rule-gap);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--rule-gap) - 1px),
+      rgb(var(--rule)) calc(var(--rule-gap) - 1px),
+      rgb(var(--rule)) var(--rule-gap)
+    );
+    /* Shift the rules up so each one sits just under a line's baseline. */
+    background-position: 0 0;
+  }
+}
+
+/* TipTap / ProseMirror editor ------------------------------------ */
+.ProseMirror {
+  min-height: 62vh;
+  outline: none;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: rgb(var(--ink));
+}
+.ProseMirror > * + * { margin-top: 0.75rem; }
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgb(var(--muted));
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

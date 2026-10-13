@@ -2,13 +2,13 @@
 
 ## Mac
 
-Use Node.js 20 as specified in `.nvmrc`, with npm, and PostgreSQL.
+Use Node.js 22 as specified in `.nvmrc`, with npm, and PostgreSQL.
 For this private repository, authenticate to GitHub when cloning, or download
 the ZIP from Code in the repository and extract it.
 
 ```sh
-git clone https://github.com/gwilltsherman-byte/writers-workshop-clean.git
-cd writers-workshop-clean
+git clone https://github.com/gwilltsherman-byte/writers-workshop.git
+cd writers-workshop
 cp .env.example .env
 ```
 
@@ -46,12 +46,12 @@ Screen for a shortcut. The Mac must remain on and the server must remain running
 
 ## GitHub hosting
 
-GitHub Pages serves static files. This app needs a running Node server, API
-routes, PostgreSQL and WebSockets; Pages cannot host the complete app.
+Open https://codespaces.new/gwilltsherman-byte/writers-workshop and create a
+codespace. The included setup creates PostgreSQL, runs migrations and starts
+the app. Open forwarded port 3000, keep it private, and sign in with the same
+GitHub account on iPhone to use that address. It runs while the codespace is active.
 
-For a GitHub development environment, create a Codespace from Code, Codespaces.
-Configure a reachable database, run the setup commands above, and open the
-forwarded port 3000. Set `APP_BASE_URL` to that forwarded HTTPS address before
-restarting the app. Keep the forwarded port private and sign in with your
-GitHub account on the iPhone to access it. A Codespace runs only while active
-and is a development option rather than permanent hosting.
+Pages cannot host the API, database or WebSocket server. For permanent hosting,
+first update the existing framework dependencies, then choose a Node host with PostgreSQL. Provide
+DATABASE_URL, APP_BASE_URL, AUTH_SECRET and SMTP settings there. No database or
+paid service is created by this repository configuration.

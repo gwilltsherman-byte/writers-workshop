@@ -155,8 +155,8 @@ export function AppShell({ children }: AppShellProps) {
             </Link>
             <p className="mt-2">
               Questions or problems?{" "}
-              <a href="mailto:writers-workshop.netlify@proton.me" className="text-ink-soft underline decoration-line-strong hover:text-ink hover:decoration-ink">
-                writers-workshop.netlify@proton.me
+              <a href="https://github.com/gwilltsherman-byte/writers-workshop/issues" className="text-ink-soft underline decoration-line-strong hover:text-ink hover:decoration-ink">
+                Report an issue
               </a>
             </p>
             <p className="mt-1">Set in Literata and Courier Prime.</p>

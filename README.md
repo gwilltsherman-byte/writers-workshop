@@ -1,66 +1,44 @@
-# Writers’ Workshop
+# Writers' Workshop
 
-[Run on Mac and iPhone](RUNNING.md), including GitHub hosting options.
+Write drafts, swap critiques, play writing games and publish stories to a shared
+library. The app uses Next.js, PostgreSQL, Prisma, Socket.IO and Yjs.
 
-A website for writers. Write drafts, swap critiques with other writers, play
-timed writing games, and publish your work to a shared library.
+## Run it on GitHub
 
-**Stack:** Next.js 14 (App Router) · Prisma + PostgreSQL · Tailwind (custom
-editorial design system, light + dark) · Socket.IO + Yjs for realtime.
+Open [Writers' Workshop in Codespaces](https://codespaces.new/gwilltsherman-byte/writers-workshop).
+Create the codespace and wait for setup. It creates a development database,
+generates a session secret, installs dependencies and starts the app. Open port
+3000 from the Ports panel. Keep it private and sign in to GitHub on your iPhone
+to open the same address. The codespace must remain running.
 
----
+GitHub Pages cannot run this app's API, database or live features. Codespaces
+provides a GitHub development environment; permanent hosting needs a Node server
+and PostgreSQL. The current framework needs a security update before a public production deployment. Use the private Codespace for now.
+Production needs a database connection, a session secret and SMTP settings for
+verification emails. No paid service or database is provisioned by these setup files.
 
-## Local development
+## Run it on Mac
 
-```bash
-cp .env.example .env      # set DATABASE_URL (and AUTH_SECRET)
-npm install
-npm run migrate           # create the database schema
-npm run dev               # http://localhost:3000  (web + realtime)
+See [RUNNING.md](RUNNING.md) for installation and iPhone over Wi-Fi instructions.
+
+```sh
+cp .env.example .env
+npm ci
+npm run migrate
+npm run dev
 ```
 
-`npm run dev` runs `server/index.ts`, which serves the Next.js app **and** the
-realtime layer (Socket.IO + Yjs) so every feature works locally.
+Set DATABASE_URL and AUTH_SECRET in .env before running those commands.
+The development server includes live chat, critiques, games and editor snapshots.
+In development, signup verification codes can be displayed without SMTP.
 
----
+## Build for a Node host
 
-## Deploying to Netlify
+```sh
+npm run build
+npm run start
+```
 
-The app is Netlify-ready. Pages and every `/api/*` route become serverless
-functions via `@netlify/plugin-nextjs` (config in `netlify.toml`).
-
-1. Push this repo to GitHub and “Add new site → Import” in Netlify.
-2. Set environment variables (Site settings → Environment):
-   - `DATABASE_URL`: a hosted Postgres (Neon/Supabase pooled connection).
-   - `AUTH_SECRET`: generate one with `openssl rand -base64 32`.
-   - `APP_BASE_URL`: your Netlify site URL.
-   - `SMTP_*`: optional. Without them, verification codes show up in the UI.
-3. Deploy. Build command and Node version are already set in `netlify.toml`.
-
-Run migrations against your hosted DB once (locally, with `DATABASE_URL`
-pointing at it): `npx prisma migrate deploy`.
-
-### Realtime on a serverless host
-
-Netlify is serverless and can’t keep a WebSocket server running, so the live
-features (**chat, 10-min and 1-day critiques, the writing game, and live editor
-snapshots**) are turned off on a plain Netlify deploy. Those pages notice the
-missing server and show a short message explaining why. Everything else (editor,
-publishing, library, stories, vocab, auth, account) works normally.
-
-To enable realtime in production:
-
-1. Deploy `server/index.ts` to an always-on host like Render, Railway, or Fly.io.
-   Start command: `npm run realtime` (needs the same `DATABASE_URL`).
-2. In Netlify, set `NEXT_PUBLIC_REALTIME_URL` to that server’s URL and redeploy.
-3. On the realtime host, set `APP_BASE_URL` to your Netlify URL so its CORS
-   allowlist accepts the browser origin.
-
----
-
-## Auth notes
-
-Sessions are stateless signed JWTs in an httpOnly cookie (`AUTH_SECRET`), so
-they work across serverless invocations. Signup is a two-step email-code flow;
-without SMTP configured, the code is returned to the client for local testing.
-
+The start command serves the site, API routes and live connections together.
+Set APP_BASE_URL to its public HTTPS origin. Leave NEXT_PUBLIC_REALTIME_URL empty
+for this single-server setup. Sessions use signed JWTs in httpOnly cookies.

@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-// A single PrismaClient per process. On serverless (Netlify Functions) modules
+// A single PrismaClient per process. On serverless (hosted deployments) modules
 // are re-used across warm invocations, so we cache the client on `globalThis`
 // to avoid exhausting the database connection pool with a new client per call.
 const globalForPrisma = globalThis as unknown as { __wwPrisma?: PrismaClient };

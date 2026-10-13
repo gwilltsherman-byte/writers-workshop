@@ -3,7 +3,7 @@ import Link from "next/link";
 
 /**
  * Shown on realtime pages when no live socket server is reachable (e.g. a plain
- * Netlify deploy). Explains the situation instead of spinning forever.
+ * static deployment). Explains the situation instead of spinning forever.
  */
 export default function RealtimeNotice({
   feature,
@@ -15,8 +15,7 @@ export default function RealtimeNotice({
         <h2 className="pt-6 text-2xl font-semibold text-ink">{feature} needs a live server</h2>
         <div className="mt-4 max-w-[65ch] space-y-4 leading-7 text-ink-soft">
           <p>
-            {feature} needs a live (WebSocket) connection to work. This site runs on Netlify, which
-            can’t keep that kind of server running, so the feature is switched off here for now.
+            {feature} needs a live (WebSocket) connection to work. A live server is not reachable from this site yet.
           </p>
           <p className="text-[0.9375rem]">
             {children ?? (

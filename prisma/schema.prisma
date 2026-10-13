@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  // "native" for local dev; the rhel targets are for Netlify Functions (AWS
+  // "native" for local dev; the rhel targets are for hosted deployments (AWS
   // Lambda) so the query engine binary matches that runtime.
   binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }

@@ -1,17 +1,4 @@
-/**
- * Local realtime server.
- *
- * This process runs Next.js AND the realtime layer (Socket.IO + Yjs) that
- * Netlify's serverless platform cannot host. All HTTP (pages and every
- * `/api/*` route) is handled by Next.js App Router route handlers, so auth
- * and data behave identically in local dev and on Netlify.
- *
- * Use `npm run dev` for the full experience (realtime included). On Netlify
- * only the Next app is deployed; realtime pages detect the missing socket
- * server and show a graceful "live server required" notice. To power realtime
- * in production, deploy THIS file to a always-on host (Render / Railway / Fly)
- * and point the frontend at it with NEXT_PUBLIC_REALTIME_URL.
- */
+/** Serve Next.js, API routes and the Socket.IO/Yjs live features together. */
 import next from "next";
 import express from "express";
 import { createServer } from "http";
@@ -96,7 +83,7 @@ async function main() {
   const dev = process.env.NODE_ENV !== "production";
 
   // REALTIME_ONLY: run just the Socket.IO + Yjs layer (for an always-on host
-  // like Render that powers the realtime features while Netlify serves the
+  // like Render that powers the realtime features while a separate host serves the
   // site). In that mode we skip Next entirely, so no production build is needed.
   const realtimeOnly = process.env.REALTIME_ONLY === "1" || process.env.REALTIME_ONLY === "true";
   let handle: ((req: any, res: any) => unknown) | null = null;
@@ -106,7 +93,7 @@ async function main() {
     await app.prepare();
   }
 
-  // Normalize to a bare origin so "https://site.netlify.app/" (trailing slash,
+  // Normalize to a bare origin so "https://example.com/" (trailing slash,
   // as copied from the address bar) still matches the browser's Origin header.
   const rawBase = (process.env.APP_BASE_URL || "http://localhost:3000").trim();
   let appOrigin = rawBase.replace(/\/+$/, "");
@@ -387,9 +374,10 @@ async function main() {
     else if (!(url && url.startsWith("/socket.io"))) socket.destroy();
   });
 
+  expressApp.get("/healthz", (_req, res) => res.json({ ok: true, realtime: true }));
+
   if (realtimeOnly) {
     // Health check + friendly root for the standalone realtime host.
-    expressApp.get("/healthz", (_req, res) => res.json({ ok: true, mode: "realtime" }));
     expressApp.get("*", (_req, res) => res.type("text").send("Writers' Workshop realtime server is up and running."));
   } else {
     // Everything else (pages + /api route handlers) is served by Next.js.

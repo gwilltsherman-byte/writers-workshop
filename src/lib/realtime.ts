@@ -1,17 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-/**
- * Realtime (Socket.IO) is served by a persistent Node server, which Netlify's
- * serverless platform cannot host. This hook decides, on the client, whether a
- * live connection is possible:
- *
- *  - If NEXT_PUBLIC_REALTIME_URL is set, connect there (a companion host).
- *  - Otherwise, same-origin sockets only work when a realtime server is
- *    present, which means local dev via `npm run dev`. We detect localhost.
- *  - On a plain Netlify deploy with no companion URL, realtime is disabled and
- *    pages should render a graceful notice instead of retrying forever.
- */
+/** Use a configured live server or detect the live endpoint on this host. */
 export const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL || "";
 
 export type RealtimeStatus = "checking" | "enabled" | "disabled";
@@ -30,9 +20,12 @@ export function useRealtime(): Realtime {
       setRt({ status: "enabled", url: REALTIME_URL });
       return;
     }
-    const host = window.location.hostname;
-    const local = host === "localhost" || host === "127.0.0.1" || host.endsWith(".local");
-    setRt(local ? { status: "enabled", url: "" } : { status: "disabled", url: "" });
+    let active = true;
+    fetch("/healthz", { cache: "no-store" })
+      .then(async response => response.ok && (await response.json()).realtime === true)
+      .then(enabled => { if (active) setRt({ status: enabled ? "enabled" : "disabled", url: "" }); })
+      .catch(() => { if (active) setRt({ status: "disabled", url: "" }); });
+    return () => { active = false; };
   }, []);
 
   return rt;

@@ -2,7 +2,7 @@
 
 ## Install the hosted app
 
-Open the permanent app URL in Safari. On iPhone choose **Share > Add to Home
+Open [Writers’ Workshop](https://writers-workshop.netlify.app/) in Safari. On iPhone choose **Share > Add to Home
 Screen**. On Mac choose **File > Add to Dock**. Open that icon before writing
 so you use the installed app's saved draft. Closing it keeps your writing.
 After it has loaded once, you can keep drafting offline. **Install app** in
@@ -18,8 +18,8 @@ PostgreSQL database and require an internet connection. Guest identities return
 on the same device; sign in to return to an account on another device. Guest
 device credentials expire after a year of inactivity for security.
 
-Deployment is deferred while the Netlify team is paused. The local and Codespaces
-steps below are for development, not the public app's normal installation.
+The local and Codespaces steps below are for development. To use the hosted
+app, open [writers-workshop.netlify.app](https://writers-workshop.netlify.app/).
 
 ## Mac
 

@@ -23,8 +23,8 @@ steps below are for development, not the public app's normal installation.
 
 ## Mac
 
-Install Node.js 22 and PostgreSQL 16 or later. Authenticate to GitHub when
-cloning this private repository, or download its ZIP from the Code menu.
+Install Node.js 22 and PostgreSQL 16 or later. Clone this repository, or
+download its ZIP from the Code menu.
 
 ```sh
 git clone https://github.com/gwilltsherman-byte/writers-workshop.git

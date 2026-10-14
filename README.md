@@ -1,16 +1,14 @@
 # Writers’ Workshop
 
-**[Set up Writers’ Workshop](RUNNING.md)** · [Use on Mac or iPhone](RUNNING.md#install-the-hosted-app) · [Report a problem](https://github.com/gwilltsherman-byte/writers-workshop/issues/new)
+**[Open Writers’ Workshop](https://writers-workshop.netlify.app/)** · [Use on Mac or iPhone](RUNNING.md#install-the-hosted-app) · [Report a problem](https://github.com/gwilltsherman-byte/writers-workshop/issues/new)
 
-Writers’ Workshop is my app for writing and finding readers. Keep a draft, publish stories, trade critiques, chat with other writers, or play a multiplayer writing game. Your personal draft stays on your device; shared drafts, stories and live activities use a PostgreSQL database and need an internet connection.
-
-The hosted app is awaiting deployment while the Netlify team is paused. You can run it locally using the setup guide.
+Writers’ Workshop is a place to write and find readers. Keep a draft, publish stories, trade critiques, chat with other writers, or play a multiplayer writing game. Your personal draft stays on your device and works offline after the first load. Connect to the internet to share drafts, publish stories and join live activities.
 
 <img src="docs/images/overview.svg" alt="Writers’ Workshop overview: keep a draft, exchange critiques and publish stories, or join a multiplayer writing game" width="100%">
 
 ## Start writing
 
-1. [Set up the app](RUNNING.md) and open it on your computer or phone.
+1. [Open Writers’ Workshop](https://writers-workshop.netlify.app/) on your computer or phone.
 2. Choose **Write** to start a draft, select genres and save a backup.
 3. When you’re ready, publish a story, exchange a critique or try a writing game.
 

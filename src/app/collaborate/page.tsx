@@ -36,6 +36,11 @@ export default function SharedDraft() {
         title="Write together"
         description="Create a shared draft and send its link to a writing partner."
       />
+      <p role="status" className="mb-4 text-sm text-muted">
+        {connected
+          ? `Writing as ${snapshot?.identity.name}`
+          : "Connecting to your shared draft…"}
+      </p>
       {error && <Notice tone="danger">{error}</Notice>}
       {conflict && (
         <Notice tone="info">
@@ -44,35 +49,39 @@ export default function SharedDraft() {
         </Notice>
       )}
       <div className="max-w-4xl space-y-4">
-        <input
-          aria-label="Shared draft title"
-          className="field"
-          maxLength={200}
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            setDirty(true);
-          }}
-          placeholder="Title"
-        />
-        <textarea
-          aria-label="Shared writing"
-          className="field typescript min-h-[50vh]"
-          maxLength={100000}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setDirty(true);
-          }}
-          placeholder="Write together…"
-        />
-        <div className="flex gap-3">
+        <label className="grid gap-2">
+          <span className="label">Draft title</span>
+          <input
+            className="field"
+            maxLength={200}
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setDirty(true);
+            }}
+            placeholder="Title"
+          />
+        </label>
+        <label className="grid gap-2">
+          <span className="label">Your shared writing</span>
+          <textarea
+            className="field typescript min-h-[50vh]"
+            maxLength={100000}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setDirty(true);
+            }}
+            placeholder="Write together…"
+          />
+        </label>
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={save}
             disabled={!connected || busy || conflict}
             className="btn-primary"
           >
-            {s ? "Save shared draft" : "Create shared draft"}
+            {busy ? "Saving…" : s ? "Save shared draft" : "Create shared draft"}
           </button>
           {s && (
             <button
@@ -87,7 +96,7 @@ export default function SharedDraft() {
             </button>
           )}
         </div>
-        <p className="text-sm text-muted">
+        <p role="status" className="text-sm text-muted">
           {s
             ? `Version ${s.revision} · ${dirty ? "You have unsaved changes" : "Saved and shared"}`
             : "Create the draft before inviting a partner."}
@@ -114,23 +123,25 @@ export default function SharedDraft() {
             <p className="mt-3 whitespace-pre-wrap break-words font-mono">
               {s!.text}
             </p>
-            <button
-              className="btn-secondary mt-4"
-              onClick={() => {
-                setDirty(false);
-                setTitle(s!.title);
-                setText(s!.text);
-                setRevision(s!.revision);
-              }}
-            >
-              Use this version
-            </button>
-            <button
-              className="btn-secondary mt-4 ml-3"
-              onClick={() => setRevision(s!.revision)}
-            >
-              Keep my version for the next save
-            </button>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setDirty(false);
+                  setTitle(s!.title);
+                  setText(s!.text);
+                  setRevision(s!.revision);
+                }}
+              >
+                Use this version
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => setRevision(s!.revision)}
+              >
+                Keep my version for the next save
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -2,8 +2,8 @@ import React from "react";
 import { cx } from "@/components/ui";
 
 /**
- * A ruled 3×5 index card: a label above the red headline rule, then typed
- * lines on blue rules. Prompts and flashcards use it across the site.
+ * A bordered manuscript sheet with a compact label and typed content.
+ * Prompts and flashcards share this flat surface across the workshop.
  * Change `cardKey` to deal a fresh card (it replays the short deal-in motion).
  */
 export function IndexCard({

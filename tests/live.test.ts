@@ -334,6 +334,28 @@ test("abandoned writing/voting timers advance from persisted timestamps without 
   }
   assert.equal((s.state as GameState).phase, "results");
 });
+test("creating a shared draft immediately persists its library document without an extra save", async () => {
+  const a = await writer("NewDraft");
+  const created = await liveAction(db, a, {
+    mode: "doc",
+    action: "create",
+    payload: {
+      title: "First shared draft",
+      text: "This opening is already saved.",
+    },
+  });
+  const document = await second.document.findUnique({
+    where: { roomSlug: created.room! },
+  });
+  assert.ok(document, "The initial create must persist a library document.");
+  assert.equal(document.title, "First shared draft");
+  assert.equal(document.html, "This opening is already saved.");
+  const room = await second.room.findUnique({ where: { slug: created.room! } });
+  assert.ok(
+    room?.memberIds.includes(a.id),
+    "The draft creator must have library access.",
+  );
+});
 test("shared drafts persist, invited writers join, and concurrent edits cannot silently overwrite another version", async () => {
   const a = await writer("DraftA"),
     b = await writer("DraftB");

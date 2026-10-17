@@ -8,7 +8,7 @@ so you use the installed app's saved draft. Closing it keeps your writing.
 After it has loaded once, you can keep drafting offline. **Install app** in
 the app's footer includes the same steps.
 
-In Write, **Save a backup** downloads your current draft and genres.
+In Write, **Download backup** downloads your current draft and genres.
 **Restore a backup** opens that file on another device. Passwords and player
 credentials are not included. Private browsing and clearing app data can remove
 local drafts, so retain a backup before doing either.

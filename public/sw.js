@@ -1,5 +1,5 @@
 const PREFIX = 'writers-workshop:';
-const CACHE = PREFIX + 'offline-v1';
+const CACHE = PREFIX + 'offline-v2';
 const FILES = ['/offline.html', '/offline.css', '/offline.js', '/draft-storage.js', '/app-icons/icon-192.png', '/app-icons/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));

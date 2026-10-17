@@ -355,6 +355,9 @@ export async function liveAction(
             state: json(doc),
           },
         });
+        await tx.document.create({
+          data: { roomSlug: room.slug, title: doc.title, html: doc.text },
+        });
         state = doc;
       }
       if (

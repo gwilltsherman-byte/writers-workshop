@@ -31,7 +31,7 @@ export default function GamePage() {
     }
   }, [g, me?.role, snapshot?.room]);
   useEffect(() => {
-    if (!writing || !draft) return;
+    if (!writing) return;
     const t = setTimeout(() => {
       void act("draft", { text: draft });
     }, 700);
@@ -45,9 +45,9 @@ export default function GamePage() {
   const names = (role: number) =>
     g?.players.find((p) => p.role === role)?.name || `Writer ${role}`;
   const piece = (r: number) => (
-    <div key={r} className="card p-5">
+    <div key={r} className="card min-w-0 p-5">
       <h3 className="font-semibold">{names(r)}</h3>
-      <p className="mt-3 min-h-36 whitespace-pre-wrap break-words font-mono">
+      <p className="mt-3 min-h-36 whitespace-pre-wrap break-words font-serif leading-relaxed">
         {g?.drafts[r] || "Waiting for a piece…"}
       </p>
     </div>
@@ -59,7 +59,7 @@ export default function GamePage() {
         description="Two to six writers, three prompts. Write, compare your pieces, and vote together."
       />
       {error && <Notice tone="danger">{error}</Notice>}
-      <p className="mb-4 text-sm text-muted">
+      <p role="status" className="mb-4 text-sm text-muted">
         {connected
           ? `Playing as ${snapshot?.identity.name}`
           : "Connecting to the workshop…"}
@@ -95,7 +95,10 @@ export default function GamePage() {
               {me?.role ? `You’re Writer ${me.role}` : "Lobby"}
             </span>
             <span className="text-sm text-muted">
-              {g.players.filter((p) => !p.left).length} writers
+              {g.players.filter((p) => !p.left).length}{" "}
+              {g.players.filter((p) => !p.left).length === 1
+                ? "writer"
+                : "writers"}
             </span>
             {g.endsAt && (
               <span
@@ -107,7 +110,11 @@ export default function GamePage() {
                 {String(left % 60).padStart(2, "0")}
               </span>
             )}
-            <button className="btn-ghost ml-auto" onClick={() => act("leave")}>
+            <button
+              disabled={!connected || busy}
+              className="btn-ghost ml-auto"
+              onClick={() => act("leave")}
+            >
               Leave
             </button>
           </div>
@@ -128,23 +135,25 @@ export default function GamePage() {
                 automatically at six. With two players, both of you vote; tied
                 votes give each writer a point.
               </p>
-              <button
-                disabled={busy || g.players.length < 2}
-                onClick={() => act("start")}
-                className="btn-primary mt-4"
-              >
-                Start now
-              </button>
-              <button
-                onClick={() =>
-                  setShare(
-                    `${location.origin}/game6?room=${encodeURIComponent(snapshot!.room!)}`,
-                  )
-                }
-                className="btn-secondary ml-3"
-              >
-                Share game link
-              </button>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  disabled={!connected || busy || g.players.length < 2}
+                  onClick={() => act("start")}
+                  className="btn-primary"
+                >
+                  Start now
+                </button>
+                <button
+                  onClick={() =>
+                    setShare(
+                      `${location.origin}/game6?room=${encodeURIComponent(snapshot!.room!)}`,
+                    )
+                  }
+                  className="btn-secondary"
+                >
+                  Share game link
+                </button>
+              </div>
               {share && (
                 <div className="mt-4">
                   <label className="text-sm" htmlFor="game-invite">
@@ -191,16 +200,16 @@ export default function GamePage() {
                       onChange={(e) => setDraft(e.target.value)}
                       placeholder="Write your piece…"
                     />
-                    <div className="mt-3 flex gap-3">
+                    <div className="mt-3 flex flex-wrap gap-3">
                       <button
-                        disabled={busy || !draft.trim()}
+                        disabled={!connected || busy || !draft.trim()}
                         onClick={() => act("submit", { text: draft })}
                         className="btn-primary"
                       >
                         Submit piece
                       </button>
                       <button
-                        disabled={busy}
+                        disabled={!connected || busy}
                         onClick={() => act("draft", { text: draft })}
                         className="btn-secondary"
                       >
@@ -208,8 +217,8 @@ export default function GamePage() {
                       </button>
                     </div>
                     <p className="mt-2 text-sm text-muted">
-                      Both submissions start voting immediately. The timer also
-                      saves the round when it runs out.
+                      Your draft saves as you write. Voting begins when both
+                      writers submit, or when the timer runs out.
                     </p>
                   </div>
                 ) : (
@@ -225,7 +234,7 @@ export default function GamePage() {
                     {g.pair?.map((r) => (
                       <button
                         key={r}
-                        disabled={busy}
+                        disabled={!connected || busy}
                         onClick={() =>
                           act("vote", { role: r, roundIndex: g.roundIndex })
                         }
@@ -253,14 +262,19 @@ export default function GamePage() {
                     (a, b) => (g.score[b.role] || 0) - (g.score[a.role] || 0),
                   )
                   .map((p) => (
-                    <div key={p.id} className="flex justify-between py-3">
-                      <span>{p.name}</span>
-                      <strong>{g.score[p.role] || 0} pts</strong>
+                    <div
+                      key={p.id}
+                      className="flex items-baseline justify-between gap-4 py-3"
+                    >
+                      <span className="min-w-0 break-words">{p.name}</span>
+                      <strong className="shrink-0">
+                        {g.score[p.role] || 0} pts
+                      </strong>
                     </div>
                   ))}
               </div>
               <button
-                disabled={busy}
+                disabled={!connected || busy}
                 onClick={() => act("start")}
                 className="btn-primary"
               >

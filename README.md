@@ -4,7 +4,11 @@
 
 Writers’ Workshop is a place to write and find readers. Keep a draft, publish stories, trade critiques, chat with other writers, or play a multiplayer writing game. Your personal draft stays on your device and works offline after the first load. Connect to the internet to share drafts, publish stories and join live activities.
 
-<img src="docs/images/overview.svg" alt="Writers’ Workshop overview: keep a draft, exchange critiques and publish stories, or join a multiplayer writing game" width="100%">
+<img src=".impeccable/review/desktop-final.jpg" alt="The writing desk: a saved private draft, a starting prompt, critique and game links, and recently published writing" width="100%">
+
+Interface preview with local demonstration content. [Mobile preview](.impeccable/review/mobile-final.jpg) · [Writing desk](.impeccable/review/editor-desktop-final.jpg)
+
+[Product context](PRODUCT.md) · [Design rules](DESIGN.md) · [Verification evidence and limits](VERIFICATION.md)
 
 ## Start writing
 

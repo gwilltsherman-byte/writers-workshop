@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import EmbeddedPostgres from "embedded-postgres";
+import { PrismaClient } from "@prisma/client";
 
 async function main() {
   const dir = await mkdtemp(join(tmpdir(), "workshop-preview-"));
@@ -50,9 +51,11 @@ async function main() {
     });
   });
   let web: ReturnType<typeof spawn> | undefined;
+  let db: PrismaClient | undefined;
   async function cleanup() {
     web?.kill("SIGTERM");
     await new Promise<void>((r) => smtp.close(() => r()));
+    await db?.$disconnect();
     await pg.stop();
     await rm(dir, { recursive: true, force: true });
   }
@@ -85,6 +88,7 @@ async function main() {
       { env, encoding: "utf8" },
     );
     assert.equal(migration.status, 0, migration.stdout + migration.stderr);
+    db = new PrismaClient({ datasources: { db: { url: env.DATABASE_URL } } });
     await new Promise<void>((r) => smtp.listen(25265, "127.0.0.1", () => r()));
     web = spawn(
       process.execPath,
@@ -164,11 +168,45 @@ async function main() {
       (await request(`/api/stories/${published.data.id}`)).data.story.title,
       "Smoke test story",
     );
-    assert.equal(
-      (await request("/api/library", undefined, undefined, cookie)).data.stories
-        .length,
-      1,
-    );
+    // Historical display names are not ownership, and older genre values can
+    // be lowercase. Keep both cases represented in the real HTTP workflow.
+    const sameNameStory = await db.story.create({
+      data: {
+        title: "Another writer with the same display name",
+        html: "This belongs to a different account.",
+        genres: ["fiction"],
+        authorName: account.name,
+        authorEmail: "another-writer@local.invalid",
+      },
+    });
+    const previousNameStory = await db.story.create({
+      data: {
+        title: "A story under an earlier display name",
+        html: "This still belongs in the same account library.",
+        genres: ["Poetry"],
+        authorName: "An earlier pen name",
+        authorEmail: account.email,
+      },
+    });
+    for (const genre of ["Fiction", "fiction"]) {
+      const filtered = await request(`/api/stories/list?genre=${genre}`);
+      assert.equal(filtered.res.status, 200);
+      assert.deepEqual(
+        filtered.data.items.map((story: { id: string }) => story.id).sort(),
+        [published.data.id, sameNameStory.id].sort(),
+        "Genre filtering must include canonical and lowercase stored values, and exclude other genres.",
+      );
+    }
+    assert.equal((await request("/api/library")).res.status, 401);
+    for (const library of ["/api/library", "/api/my/library"]) {
+      assert.deepEqual(
+        (await request(library, undefined, undefined, cookie)).data.stories
+          .map((story: { id: string }) => story.id)
+          .sort(),
+        [published.data.id, previousNameStory.id].sort(),
+        "The account library must follow account email, including earlier display names and excluding another account with the same name.",
+      );
+    }
     assert.equal(
       (
         await request("/api/auth/login", {
@@ -218,6 +256,7 @@ async function main() {
     );
     const emailCode = mail.at(-1)?.match(/code is (\d{6})/)?.[1];
     assert.ok(emailCode);
+    const previousSessionCookie = cookie;
     const changed = await request(
       "/api/account/confirm-email-change",
       { newEmail: "updated-player@local.invalid", code: emailCode },
@@ -231,11 +270,98 @@ async function main() {
       "updated-player@local.invalid",
     );
     assert.equal(
-      (await request("/api/library", undefined, undefined, cookie)).data.stories
-        .length,
-      1,
+      (await request("/api/me", undefined, undefined, previousSessionCookie))
+        .data.email,
+      "updated-player@local.invalid",
+      "A session opened before an email change must resolve the current account identity.",
     );
+    await db.story.create({
+      data: {
+        title: "Work belonging to the released email address",
+        html: "An older session must not gain access to this account's library.",
+        genres: ["Essay"],
+        authorName: "Another account",
+        authorEmail: account.email,
+      },
+    });
+    for (const library of ["/api/library", "/api/my/library"]) {
+      for (const sessionCookie of [cookie, previousSessionCookie]) {
+        assert.deepEqual(
+          (
+            await request(library, undefined, undefined, sessionCookie)
+          ).data.stories
+            .map((story: { id: string }) => story.id)
+            .sort(),
+          [published.data.id, previousNameStory.id].sort(),
+          "Both existing and refreshed sessions must retain the same library and exclude work assigned to the released email address.",
+        );
+      }
+    }
+    const publishedFromOlderSession = await request(
+      "/api/stories",
+      {
+        title: "Published from another existing session",
+        html: "This must use the account's current email.",
+        genres: ["Fiction"],
+      },
+      undefined,
+      previousSessionCookie,
+    );
+    assert.equal(publishedFromOlderSession.res.status, 200);
+    const currentOwnership = await db.story.findUniqueOrThrow({
+      where: { id: publishedFromOlderSession.data.id },
+    });
+    assert.equal(
+      currentOwnership.authorEmail,
+      "updated-player@local.invalid",
+      "An older cookie must publish using the current account email.",
+    );
+    for (const library of ["/api/library", "/api/my/library"]) {
+      assert.deepEqual(
+        (
+          await request(library, undefined, undefined, previousSessionCookie)
+        ).data.stories
+          .map((story: { id: string }) => story.id)
+          .sort(),
+        [
+          published.data.id,
+          previousNameStory.id,
+          publishedFromOlderSession.data.id,
+        ].sort(),
+      );
+    }
     assert.equal((await request("/api/vocab/random")).res.status, 200);
+    const accountPlayer = (
+      await request("/api/realtime/session", {}, undefined, cookie)
+    ).data;
+    const sharedDraft = await request(
+      "/api/live",
+      {
+        mode: "doc",
+        action: "create",
+        payload: {
+          title: "A new shared draft",
+          text: "Saved on the first create.",
+        },
+      },
+      accountPlayer.token,
+      cookie,
+    );
+    assert.equal(sharedDraft.res.status, 200);
+    const libraryWithDraft = await request(
+      "/api/library",
+      undefined,
+      undefined,
+      cookie,
+    );
+    assert.ok(
+      libraryWithDraft.data.docs.some(
+        (doc: { roomSlug: string; html: string }) =>
+          doc.roomSlug === sharedDraft.data.room &&
+          doc.html === "Saved on the first create.",
+      ),
+      "A newly created shared draft must appear in the account library without a second save.",
+    );
     const alice = (await request("/api/realtime/session", {})).data,
       bob = (await request("/api/realtime/session", {})).data;
     assert.notEqual(alice.id, bob.id);
@@ -295,7 +421,7 @@ async function main() {
       401,
     );
     console.log(
-      "Production HTTP smoke checks passed: signup email, verification, login, publishing, library, vocabulary, guest identities, chat and private history.",
+      "Production HTTP smoke checks passed: signup email, verification, login, publishing, case-compatible genre filters, account-owned library, vocabulary, guest identities, chat and private history.",
     );
     console.log("Local preview ready: http://localhost:3006");
     if (process.argv.includes("--preview")) await new Promise(() => {});
@@ -307,5 +433,5 @@ async function main() {
 }
 main().catch((e) => {
   console.error(e);
-  process.exitCode = 1;
+  process.exit(1);
 });

@@ -10,10 +10,17 @@ export async function GET() {
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const stories = await prisma.story.findMany({
-    where: { authorName: me.name },
+    where: { authorEmail: me.email },
     orderBy: { createdAt: "desc" },
   });
-  const rooms = await prisma.room.findMany({ where: { type: "doc", memberIds: { has: me.userId } }, select: { slug: true } });
-  const docs = await prisma.document.findMany({ where: { roomSlug: { in: rooms.map(r => r.slug) } }, orderBy: { updatedAt: "desc" }, take: 50 });
+  const rooms = await prisma.room.findMany({
+    where: { type: "doc", memberIds: { has: me.userId } },
+    select: { slug: true },
+  });
+  const docs = await prisma.document.findMany({
+    where: { roomSlug: { in: rooms.map((r) => r.slug) } },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+  });
   return NextResponse.json({ stories, docs });
 }

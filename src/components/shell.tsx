@@ -1,9 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth";
-import { cx } from "@/components/ui";
+import { cx, Icon } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
 import { LogoMark, Wordmark } from "@/components/Logo";
 
@@ -11,165 +11,182 @@ type AppShellProps = {
   children: React.ReactNode;
   name?: string;
   setName?: (name: string) => void;
+  focus?: boolean;
 };
-
 const navItems = [
+  { href: "/", label: "Your desk" },
   { href: "/editor", label: "Write" },
-  { href: "/stories", label: "Stories" },
-  { href: "/critique/short", label: "Critique" },
-  { href: "/chat", label: "Chat" },
-  { href: "/game6", label: "Game" },
-  { href: "/vocab", label: "Vocab" },
-  { href: "/library", label: "Library" },
+  { href: "/stories", label: "Read" },
+  { href: "/critique/short", label: "Exchange critiques" },
+  { href: "/collaborate", label: "Write together" },
+  { href: "/chat", label: "Conversation" },
+  { href: "/game6", label: "Writing game" },
+  { href: "/vocab", label: "Vocabulary" },
+  { href: "/library", label: "My library" },
 ];
 
-function NavLink({
-  href,
-  label,
-  active,
-  onClick,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={cx(
-        "relative py-2 text-[0.9375rem] transition-colors duration-150",
-        active ? "text-ink" : "text-ink-soft hover:text-ink"
-      )}
-      aria-current={active ? "page" : undefined}
-    >
-      {label}
-      <span
-        className={cx(
-          "absolute bottom-0.5 left-0 h-[2px] bg-accent transition-[width] duration-200 ease-out",
-          active ? "w-full" : "w-0"
-        )}
-      />
-    </Link>
-  );
-}
-
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, focus = false }: AppShellProps) {
   const { me, hydrated, logout } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-
-  const isActive = (href: string) =>
-    pathname === href || (pathname?.startsWith(`${href}/`) ?? false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const active = (href: string) =>
+    href === "/"
+      ? pathname === "/"
+      : href === "/critique/short"
+        ? pathname.startsWith("/critique")
+        : pathname === href || pathname.startsWith(`${href}/`);
+  useEffect(() => {
+    if (!open) return;
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [open]);
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-line bg-paper">
-        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4">
-          <Link href="/" className="flex items-center gap-1.5">
-            <LogoMark size={30} />
-            <Wordmark className="text-lg text-ink" />
-          </Link>
-
-          <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
-            {navItems.map((item) => (
-              <NavLink key={item.href} {...item} active={isActive(item.href)} />
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle className="hidden sm:grid" />
-            {!hydrated ? (
-              <div className="h-11 w-24 animate-pulse rounded bg-surface-sunken" />
-            ) : me ? (
-              <div className="hidden items-center gap-2 sm:flex">
-                <Link
-                  href="/profile"
-                  className="flex min-h-11 items-center gap-2 rounded px-2.5 text-[0.9375rem] text-ink transition-colors hover:bg-surface-sunken"
-                >
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-xs font-semibold text-paper">
-                    {me.name?.[0]?.toUpperCase() ?? "?"}
-                  </span>
-                  {me.name}
-                </Link>
-                <button onClick={logout} className="btn-ghost px-3">Sign out</button>
-              </div>
-            ) : (
-              <Link href="/auth" className="btn-primary hidden px-4 sm:inline-flex">Log in</Link>
-            )}
-            <button
-              onClick={() => setOpen((v) => !v)}
-              className="grid h-11 w-11 place-items-center rounded border border-line-strong text-ink transition-colors hover:bg-surface-sunken lg:hidden"
-              aria-expanded={open}
-              aria-label="Toggle navigation"
+    <div className={cx("app-shell", focus && "app-shell-focus")}>
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      {!focus && (
+        <header className="workshop-header">
+          <div className="masthead">
+            <Link
+              href="/"
+              className="brand"
+              aria-label="Writers’ Workshop home"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-              </svg>
-            </button>
+              <LogoMark size={32} />
+              <Wordmark />
+            </Link>
+            <span className="masthead-note">Good writing takes company.</span>
+            <div className="account-tools">
+              <ThemeToggle />
+              {hydrated &&
+                (me ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      className="account-name"
+                      aria-label={`Profile for ${me.name}`}
+                    >
+                      <span className="avatar">
+                        {me.name?.[0]?.toUpperCase() || "W"}
+                      </span>
+                      <span className="account-label">{me.name}</span>
+                    </Link>
+                    <Link
+                      href="/settings"
+                      className="settings-link"
+                      aria-label="Settings"
+                    >
+                      <Icon name="settings" size={19} />
+                    </Link>
+                  </>
+                ) : (
+                  <Link href="/auth" className="btn-secondary account-login">
+                    Log in <Icon name="arrow" size={15} />
+                  </Link>
+                ))}
+              <button
+                ref={menuButton}
+                onClick={() => setOpen(!open)}
+                className="menu-button"
+                aria-expanded={open}
+                aria-controls="mobile-navigation"
+                aria-label={open ? "Close navigation" : "Open navigation"}
+              >
+                <Icon name={open ? "close" : "menu"} size={21} />
+              </button>
+            </div>
           </div>
-        </div>
-
-        {open && (
-          <div className="border-t border-line bg-paper px-4 py-4 lg:hidden">
-            <nav aria-label="Main" className="mx-auto flex max-w-6xl flex-col gap-1">
+          <div className="nav-band">
+            <nav className="desktop-navigation" aria-label="Main">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpen(false)}
                   className={cx(
-                    "flex min-h-11 items-center border-l-2 px-3 text-base transition-colors",
-                    isActive(item.href) ? "border-accent text-ink" : "border-transparent text-ink-soft hover:bg-surface-sunken hover:text-ink"
+                    "nav-link",
+                    active(item.href) && "nav-link-active",
                   )}
+                  aria-current={active(item.href) ? "page" : undefined}
                 >
                   {item.label}
                 </Link>
               ))}
             </nav>
-            <div className="mx-auto mt-4 flex max-w-6xl items-center gap-2 border-t border-line pt-4">
-              <ThemeToggle />
-              {me ? (
-                <>
-                  <Link href="/profile" onClick={() => setOpen(false)} className="btn-secondary">Profile</Link>
-                  <Link href="/settings" onClick={() => setOpen(false)} className="btn-secondary">Settings</Link>
-                  <button onClick={() => { logout(); setOpen(false); }} className="btn-primary ml-auto">Sign out</button>
-                </>
-              ) : (
-                <Link href="/auth" onClick={() => setOpen(false)} className="btn-primary ml-auto">Log in / Sign up</Link>
+          </div>
+          {open && (
+            <div className="mobile-navigation" id="mobile-navigation">
+              <nav aria-label="Mobile navigation">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    aria-current={active(item.href) ? "page" : undefined}
+                    className={active(item.href) ? "mobile-active" : ""}
+                  >
+                    {item.label}
+                    <Icon name="arrow" size={15} />
+                  </Link>
+                ))}
+              </nav>
+              <div className="mobile-appearance">
+                <span>Appearance</span>
+                <ThemeToggle />
+              </div>
+              {me && (
+                <div className="mobile-account">
+                  <Link href="/profile" onClick={() => setOpen(false)}>
+                    Profile
+                  </Link>
+                  <Link href="/settings" onClick={() => setOpen(false)}>
+                    Settings
+                  </Link>
+                  <button
+                    onClick={() => {
+                      void logout();
+                      setOpen(false);
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-        )}
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">{children}</main>
-
-      <footer className="border-t border-line">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted sm:grid-cols-[1fr_auto] sm:items-end">
-          <div>
-            <Link href="/" className="inline-flex items-center gap-1 text-ink">
-              <LogoMark size={20} />
-              <Wordmark className="text-base" />
-            </Link>
-            <p className="mt-2">
-              Questions or problems?{" "}
-              <a href="https://github.com/gwilltsherman-byte/writers-workshop/issues" className="text-ink-soft underline decoration-line-strong hover:text-ink hover:decoration-ink">
+          )}
+        </header>
+      )}
+      <main id="main-content" tabIndex={-1} className="app-main">
+        {children}
+      </main>
+      {!focus && (
+        <footer className="workshop-footer">
+          <div className="footer-inner">
+            <p>
+              <span className="font-serif italic">
+                A little further, every draft.
+              </span>
+              <span className="footer-name">Writers’ Workshop</span>
+            </p>
+            <nav aria-label="Footer">
+              <Link href="/install">Install app</Link>
+              <Link href="/explore">Explore stories</Link>
+              <a href="https://github.com/gwilltsherman-byte/writers-workshop/issues">
                 Report an issue
               </a>
-            </p>
-            <p className="mt-1">Set in Literata and Courier Prime.</p>
+              {me && <button onClick={() => void logout()}>Sign out</button>}
+            </nav>
           </div>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-1">
-            <Link href="/install" className="py-2 transition-colors hover:text-ink">Install app</Link>
-            <Link href="/stories" className="py-2 transition-colors hover:text-ink">Stories</Link>
-            <Link href="/editor" className="py-2 transition-colors hover:text-ink">Write</Link>
-            <Link href="/critique/short" className="py-2 transition-colors hover:text-ink">Critique</Link>
-            <Link href="/vocab" className="py-2 transition-colors hover:text-ink">Vocab</Link>
-          </nav>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

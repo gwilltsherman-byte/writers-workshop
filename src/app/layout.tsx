@@ -1,30 +1,47 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { Courier_Prime, Literata } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/contexts/auth";
 import { InstalledApp } from "@/components/InstalledApp";
 
-// Literata was drawn for long-form reading on screens: headings, interface
-// text and published stories.
-const serif = Literata({
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["opsz"],
+const serif = localFont({
+  src: [
+    {
+      path: "./fonts/literata-latin.woff2",
+      style: "normal",
+      weight: "200 900",
+    },
+    {
+      path: "./fonts/literata-italic-latin.woff2",
+      style: "italic",
+      weight: "200 900",
+    },
+  ],
   variable: "--font-serif",
   display: "swap",
 });
-
-// Courier Prime is Courier redrawn for manuscripts: anything still a draft.
-const mono = Courier_Prime({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const mono = localFont({
+  src: [
+    {
+      path: "./fonts/courier-prime-latin.woff2",
+      style: "normal",
+      weight: "400",
+    },
+    {
+      path: "./fonts/courier-prime-bold-latin.woff2",
+      style: "normal",
+      weight: "700",
+    },
+  ],
   variable: "--font-mono",
   display: "swap",
 });
 
 function siteUrl() {
   try {
-    return new URL(process.env.APP_BASE_URL || process.env.URL || "http://localhost:3000");
+    return new URL(
+      process.env.APP_BASE_URL || process.env.URL || "http://localhost:3000",
+    );
   } catch {
     return new URL("http://localhost:3000");
   }
@@ -41,7 +58,11 @@ export const metadata: Metadata = {
   },
   description,
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Writers’ Workshop", statusBarStyle: "default" },
+  appleWebApp: {
+    capable: true,
+    title: "Writers’ Workshop",
+    statusBarStyle: "default",
+  },
   icons: { apple: "/app-icons/icon-180.png" },
   openGraph: {
     type: "website",
@@ -54,22 +75,33 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#171412" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f5f9" },
+    { media: "(prefers-color-scheme: dark)", color: "#151c2d" },
   ],
 };
 
 // Set the theme class before paint to avoid a flash of the wrong theme.
 const themeScript = `(function(){try{var t=localStorage.getItem('ww-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className={`${serif.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${serif.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <AuthProvider><InstalledApp />{children}</AuthProvider>
+        <AuthProvider>
+          <InstalledApp />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

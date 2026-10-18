@@ -36,6 +36,20 @@ Set these environment values for builds and Functions:
 | `SMTP_FROM` | A sender address approved by that email service. |
 
 Store secret values in Netlify's environment settings, never in the repository.
+
+For pull-request previews, explicitly configure `AUTH_SECRET` in the
+**Deploy Previews** context with a securely generated value of at least 32
+characters. It must be available to both **Builds** and **Functions**. A value
+configured only for **Production** does not fill a blank preview-context value.
+Use a separate preview secret and preserve the production value. Changing the
+preview secret invalidates existing preview login sessions. Retry the failed
+pull-request deploy after saving the configuration.
+
+The error `Set AUTH_SECRET to a random value of at least 32 characters` comes
+from the deployment preflight, before migrations or Next.js compilation. Keep
+this check; a successful local `npm run build` alone does not validate Netlify's
+context-specific environment configuration.
+
 Guest chat, critique, games and shared drafts work without SMTP. Production
 email signup reports that email is not configured if SMTP is missing; it never
 exposes a verification code. Account publishing requires signup or an existing

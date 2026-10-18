@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { readDraft } from "../../public/draft-storage.js";
 import React, { useEffect, useState } from "react";
 import { AppShell } from "@/components/shell";
 import { PageHeader, Notice } from "@/components/ui";
@@ -12,6 +14,7 @@ export default function CritiqueRoom({ long = false }: { long?: boolean }) {
   const [feedback, setFeedback] = useState("");
   const [message, setMessage] = useState("");
   const [hours, setHours] = useState(24);
+  const [draftNote, setDraftNote] = useState("");
   const [library, setLibrary] = useState<
     { id: string; title: string; html: string }[]
   >([]);
@@ -31,6 +34,24 @@ export default function CritiqueRoom({ long = false }: { long?: boolean }) {
       .then((j) => setLibrary(j.stories || []))
       .catch(() => {});
   }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("draft") !== "1")
+      return;
+    try {
+      const draft = readDraft(localStorage);
+      setTitle(draft.title.slice(0, 200));
+      setPiece(draft.html.slice(0, 100000));
+      setDraftNote(
+        draft.html.length > 100000
+          ? "The first 100,000 characters were copied for this critique. Your complete private draft is unchanged."
+          : "Copied from your private draft. Changes here won’t change the original.",
+      );
+    } catch {
+      setDraftNote(
+        "We couldn’t open your device draft. You can paste your piece below.",
+      );
+    }
+  }, []);
   async function send(e: React.FormEvent) {
     e.preventDefault();
     if (await act("message", { text: message })) setMessage("");
@@ -38,96 +59,169 @@ export default function CritiqueRoom({ long = false }: { long?: boolean }) {
   return (
     <AppShell>
       <PageHeader
-        title={long ? "Long critique" : "Fast critique"}
+        title="Exchange critiques"
         description={
           long
             ? "Exchange work and leave each other detailed notes."
             : "Pair up and spend ten minutes reading each other’s work."
         }
       />
+      <nav
+        aria-label="Critique format"
+        className="critique-tabs mb-6 flex flex-wrap gap-2"
+      >
+        <Link
+          href="/critique/short"
+          className={long ? "btn-secondary" : "btn-primary"}
+          aria-current={!long ? "page" : undefined}
+        >
+          Ten-minute exchange
+        </Link>
+        <Link
+          href="/critique/long"
+          className={long ? "btn-primary" : "btn-secondary"}
+          aria-current={long ? "page" : undefined}
+        >
+          Longer read
+        </Link>
+      </nav>
       {error && <Notice tone="danger">{error}</Notice>}
       <p className="mb-4 text-sm text-muted">
         {connected
-          ? `Playing as ${snapshot?.identity.name}`
+          ? `Joining as ${snapshot?.identity.name}`
           : "Connecting to the workshop…"}
       </p>
       {!state ? (
-        <div className="card-raised max-w-3xl p-6">
-          <p>
-            Add the piece you want critiqued. The timer starts when you’re
-            paired.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <input
-              aria-label="Title"
-              className="field flex-1"
-              maxLength={200}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title (optional)"
-            />
-            <select
-              aria-label="Pick from your library"
-              className="field sm:w-56"
-              defaultValue=""
-              onChange={(e) => {
-                const s = library.find((s) => s.id === e.target.value);
-                if (s) {
-                  setTitle(s.title);
-                  setPiece(s.html);
-                }
-              }}
-            >
-              <option value="">Pick from library…</option>
-              {library.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <textarea
-            aria-label="Your piece"
-            maxLength={100000}
-            className="field typescript mt-3 min-h-64"
-            value={piece}
-            onChange={(e) => setPiece(e.target.value)}
-            placeholder="Paste your piece…"
-          />
-          {long && (
-            <label className="mt-3 block text-sm">
-              Hours to review
-              <select
-                className="field mt-2"
-                value={hours}
-                onChange={(e) => setHours(Number(e.target.value))}
-              >
-                {[1, 6, 12, 24, 48, 72].map((h) => (
-                  <option key={h} value={h}>
-                    {h} hours
-                  </option>
-                ))}
-              </select>
+        <div className="critique-preparation grid gap-8 lg:grid-cols-[1fr_15rem]">
+          <div className="card-raised min-w-0 p-6">
+            <p>
+              Add the piece you want critiqued. The timer starts when you’re
+              paired.
+            </p>
+            {draftNote && (
+              <p className="mt-3 text-sm text-accent" role="status">
+                {draftNote}
+              </p>
+            )}
+            <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_13rem]">
+              <label className="label">
+                Piece title
+                <input
+                  aria-label="Title"
+                  className="field mt-2"
+                  maxLength={200}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title (optional)"
+                />
+              </label>
+              <label className="label">
+                Or use published work
+                <select
+                  aria-label="Pick from your library"
+                  className="field mt-2"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const s = library.find((s) => s.id === e.target.value);
+                    if (s) {
+                      setTitle(s.title);
+                      setPiece(s.html);
+                    }
+                  }}
+                >
+                  <option value="">Pick from library…</option>
+                  {library.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="label mt-5" htmlFor="critique-piece">
+              Your piece
             </label>
-          )}
-          <div className="mt-4 flex gap-3">
-            <button
-              disabled={
-                !connected || busy || !piece.trim() || snapshot?.waiting
-              }
-              onClick={() =>
-                act("join", { title, text: piece, hours, seconds: 600 })
-              }
-              className="btn-accent"
-            >
-              {snapshot?.waiting ? "Finding a partner…" : "Find a partner"}
-            </button>
-            {snapshot?.waiting && (
-              <button className="btn-secondary" onClick={() => act("cancel")}>
-                Cancel search
+            <textarea
+              id="critique-piece"
+              aria-label="Your piece"
+              maxLength={100000}
+              className="field typescript mt-2 min-h-64"
+              value={piece}
+              onChange={(e) => setPiece(e.target.value)}
+              placeholder="Paste your piece…"
+            />
+            {long && (
+              <label className="mt-3 block text-sm">
+                Hours to review
+                <select
+                  className="field mt-2"
+                  value={hours}
+                  onChange={(e) => setHours(Number(e.target.value))}
+                >
+                  {[1, 6, 12, 24, 48, 72].map((h) => (
+                    <option key={h} value={h}>
+                      {h} hours
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                disabled={
+                  !connected || busy || !piece.trim() || snapshot?.waiting
+                }
+                onClick={() =>
+                  act("join", { title, text: piece, hours, seconds: 600 })
+                }
+                className="btn-accent"
+              >
+                {snapshot?.waiting ? "Finding a partner…" : "Find a partner"}
               </button>
+              {snapshot?.waiting && (
+                <button className="btn-secondary" onClick={() => act("cancel")}>
+                  Cancel search
+                </button>
+              )}
+            </div>
+            {snapshot?.waiting && (
+              <p role="status" className="mt-4 text-sm text-muted">
+                Your piece is ready. Keep this page open while another writer
+                joins this format. You can cancel at any time.
+              </p>
             )}
           </div>
+          <aside className="pt-1">
+            <h2 className="text-xl">Be the reader you’d want.</h2>
+            <div className="mt-5 space-y-5 text-sm leading-7 text-ink-soft">
+              <p>
+                <strong className="text-ink">
+                  Notice what stays with you.
+                </strong>
+                <br />A line, an image, a moment that feels true. Tell the
+                writer why.
+              </p>
+              <p>
+                <strong className="text-ink">
+                  Be specific about the friction.
+                </strong>
+                <br />
+                Where did you lose the thread? A question is often more useful
+                than a verdict.
+              </p>
+              <p>
+                <strong className="text-ink">
+                  Leave room for their voice.
+                </strong>
+                <br />
+                Help the piece become itself.
+              </p>
+            </div>
+            <p className="mt-6 border-t border-line pt-5 text-xs leading-6 text-muted">
+              Your piece is shared with your matched partner. It is not
+              published to the reading room.
+            </p>
+          </aside>
         </div>
       ) : (
         <div className="max-w-5xl space-y-4">

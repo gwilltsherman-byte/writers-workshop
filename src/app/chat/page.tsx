@@ -13,7 +13,9 @@ export default function ChatPage() {
   useEffect(() => {
     scroll.current?.scrollTo({
       top: scroll.current.scrollHeight,
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
     });
   }, [snapshot?.messages.length]);
   async function send(e: React.FormEvent) {
@@ -28,18 +30,20 @@ export default function ChatPage() {
         description="Meet another writer for a one-on-one conversation."
       />
       {error && <Notice tone="danger">{error}</Notice>}
-      <p className="mb-4 text-sm text-muted">
+      <p role="status" className="mb-4 text-sm text-muted">
         {connected
-          ? `Playing as ${snapshot?.identity.name}`
+          ? `Chatting as ${snapshot?.identity.name}`
           : "Connecting to the workshop…"}
       </p>
       {!state ? (
         <div className="max-w-3xl border-t-2 border-ink pt-6">
           <h2 className="text-2xl font-semibold">Start a chat</h2>
           <p className="mt-2 text-ink-soft">
-            We’ll pair you with the next available writer.
+            {snapshot?.waiting
+              ? "You’re in the queue. Keep this page open; your conversation will appear when another writer joins."
+              : "We’ll pair you with the next available writer. You can join as a guest."}
           </p>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <button
               disabled={!connected || busy || snapshot?.waiting}
               onClick={() => act("join")}
@@ -48,7 +52,11 @@ export default function ChatPage() {
               {snapshot?.waiting ? "Finding a partner…" : "Find a partner"}
             </button>
             {snapshot?.waiting && (
-              <button onClick={() => act("cancel")} className="btn-secondary">
+              <button
+                disabled={busy}
+                onClick={() => act("cancel")}
+                className="btn-secondary"
+              >
                 Cancel search
               </button>
             )}
@@ -56,8 +64,8 @@ export default function ChatPage() {
         </div>
       ) : (
         <div className="card-raised max-w-3xl overflow-hidden">
-          <div className="flex items-center gap-3 border-b border-line px-5 py-3.5">
-            <strong>{partner?.name}</strong>
+          <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3.5">
+            <strong className="min-w-0 break-words">{partner?.name}</strong>
             <span className="ml-auto text-sm text-muted">
               {left
                 ? "Partner left"
@@ -67,12 +75,21 @@ export default function ChatPage() {
                   ? "Connected"
                   : "Reconnecting…"}
             </span>
-            <button onClick={() => act("leave")} className="btn-ghost">
+            <button
+              disabled={busy}
+              onClick={() => act("leave")}
+              className="btn-ghost"
+            >
               Leave
             </button>
           </div>
           <div
             ref={scroll}
+            role="log"
+            aria-label="Conversation"
+            aria-live="polite"
+            aria-relevant="additions"
+            tabIndex={0}
             className="h-[52vh] space-y-2.5 overflow-y-auto px-5 py-4"
           >
             {!snapshot?.messages.length && (
@@ -108,7 +125,7 @@ export default function ChatPage() {
             >
               <input
                 aria-label="Message"
-                className="field flex-1"
+                className="field min-w-0 flex-1"
                 value={text}
                 maxLength={2000}
                 onChange={(e) => setText(e.target.value)}
@@ -118,7 +135,7 @@ export default function ChatPage() {
                 disabled={!connected || busy || !text.trim()}
                 className="btn-primary px-5"
               >
-                Send
+                {busy ? "Sending…" : "Send"}
               </button>
             </form>
           )}

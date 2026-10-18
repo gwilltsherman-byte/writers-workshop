@@ -41,14 +41,39 @@ const config: Config = {
         danger: withVar("--danger"),
       },
       fontFamily: {
+        sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Arial",
+          "sans-serif",
+        ],
         // Literata: headings, interface text and published (typeset) work.
-        serif: ["var(--font-serif)", "Georgia", "Cambria", "Times New Roman", "serif"],
+        serif: [
+          "var(--font-serif)",
+          "Georgia",
+          "Cambria",
+          "Times New Roman",
+          "serif",
+        ],
         // Courier Prime: anything that is still a draft (typescript).
-        mono: ["var(--font-mono)", "Courier New", "Courier", "ui-monospace", "monospace"],
+        mono: [
+          "var(--font-mono)",
+          "Courier New",
+          "Courier",
+          "ui-monospace",
+          "monospace",
+        ],
       },
       fontSize: {
-        display: ["clamp(2.5rem, 1.7rem + 3.4vw, 4.25rem)", { lineHeight: "1.04", letterSpacing: "-0.03em" }],
-        title: ["clamp(2rem, 1.6rem + 1.6vw, 2.75rem)", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
+        display: [
+          "clamp(2.5rem, 1.7rem + 3.4vw, 4.25rem)",
+          { lineHeight: "1.04", letterSpacing: "-0.03em" },
+        ],
+        title: [
+          "clamp(2rem, 1.6rem + 1.6vw, 2.75rem)",
+          { lineHeight: "1.1", letterSpacing: "-0.02em" },
+        ],
       },
       borderColor: { DEFAULT: withVar("--line") },
       // Paper has barely-softened corners. Use `rounded` everywhere;

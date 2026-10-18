@@ -1,72 +1,62 @@
-"use client";
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AppShell } from "@/components/shell";
-import { PageHeader } from "@/components/ui";
-import AuthModal from "@/components/AuthModal";
-import { CURATED_STORIES } from "@/data/curatedStories";
+import { PageHeader, Icon } from "@/components/ui";
 
-type Story = { id: string; title: string; excerpt?: string; genres: string[]; authorName: string };
+const paths = [
+  {
+    href: "/editor",
+    title: "Start with a draft",
+    description:
+      "A quiet place to write. Your personal draft stays in this browser, and you can save a backup to take with you.",
+  },
+  {
+    href: "/explore",
+    title: "Find something to read",
+    description:
+      "Browse published stories by title, author, or genre. Read at your own pace.",
+  },
+  {
+    href: "/chat",
+    title: "Meet another writer",
+    description:
+      "Find a conversation, exchange feedback, or invite a partner to a shared draft. Live activities need an internet connection.",
+  },
+];
 
 export default function Onboarding() {
-  const [authed, setAuthed] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
-  useEffect(() => { try { setAuthed(localStorage.getItem("authed") === "1"); } catch {} }, []);
-
-  const router = useRouter();
-  const [rows, setRows] = useState<Story[]>([]);
-  const [pick, setPick] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    if (!authed) return;
-    setRows(CURATED_STORIES.map((c: any, i: number) => ({ id: `curated-${i}`, title: c.title, excerpt: c.excerpt, genres: c.genres, authorName: c.authorName })));
-  }, [authed]);
-
-  const count = Object.values(pick).filter(Boolean).length;
-  const submit = async () => { localStorage.setItem("onboarded", "1"); router.push("/explore"); };
-
   return (
     <AppShell>
-      <PageHeader title="Personalize your feed" description="Pick a few stories you like and we’ll use them to shape what you see in Explore." />
-
-      {!authed ? (
-        <div className="border-t-2 border-ink pt-6">
-          <h2 className="text-2xl font-semibold text-ink">Sign in to continue</h2>
-          <p className="mt-2 text-ink-soft">You’ll need an account so we can remember what you picked.</p>
-          <button onClick={() => setShowAuth(true)} className="btn-accent mt-6 px-6">Log in or sign up</button>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((s) => {
-              const active = !!pick[s.id];
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => setPick((p) => ({ ...p, [s.id]: !p[s.id] }))}
-                  aria-pressed={active}
-                  className={`rounded border p-5 text-left transition-colors duration-150 ${active ? "border-accent bg-accent-soft" : "border-line bg-surface hover:border-line-strong"}`}
-                >
-                  <div className="text-sm italic text-muted">{s.genres.join(", ")}</div>
-                  <div className="mt-1 font-serif text-lg font-semibold text-ink">{s.title}</div>
-                  <div className="mt-1 line-clamp-2 text-sm text-ink-soft">{s.excerpt || ""}</div>
-                  <div className="mt-2 text-sm text-muted">by {s.authorName}</div>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-muted">{count < 5 ? `Pick ${5 - count} more to continue` : "That’s enough to go on."}</div>
-            <button disabled={count < 5} onClick={submit} className="btn-accent px-6">Show me stories</button>
-          </div>
-        </>
-      )}
-
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onAuth={() => { setShowAuth(false); try { localStorage.setItem("authed", "1"); } catch {} setAuthed(true); }}
-        />
-      )}
+      <PageHeader
+        title="A place for your writing"
+        description="Bring a first sentence, a finished piece, or just your curiosity. There’s no setup to finish before you begin."
+      />
+      <div className="max-w-3xl divide-y divide-line border-y border-line-strong">
+        {paths.map((path) => (
+          <Link
+            key={path.href}
+            href={path.href}
+            className="group flex items-start gap-5 py-7"
+          >
+            <div className="min-w-0 flex-1">
+              <h2 className="font-serif text-2xl text-ink group-hover:text-accent">
+                {path.title}
+              </h2>
+              <p className="mt-2 max-w-[60ch] leading-relaxed text-ink-soft">
+                {path.description}
+              </p>
+            </div>
+            <Icon name="arrow" className="mt-2 text-accent" />
+          </Link>
+        ))}
+      </div>
+      <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted">
+        Write and join live activities as a guest.{" "}
+        <Link href="/auth" className="text-ink underline underline-offset-4">
+          Create an account
+        </Link>{" "}
+        when you’re ready to publish or return to the same identity on another
+        device.
+      </p>
     </AppShell>
   );
 }

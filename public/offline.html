@@ -1,6 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#faf9f6"><title>Writers’ Workshop · Write offline</title><link rel="icon" href="/app-icons/icon-192.png"><link rel="stylesheet" href="/offline.css"></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f3f5f9"><title>Writers’ Workshop · Write offline</title><link rel="icon" href="/app-icons/icon-192.png"><link rel="stylesheet" href="/offline.css"></head><body>
 <main><header><h1>Writers’ Workshop</h1><p>You’re offline. Your draft saves on this device. Connect again to chat, play or publish.</p><a href="/editor">Return to Workshop</a></header>
 <label for="draft-title">Title</label><input id="draft-title" placeholder="Untitled" maxlength="500">
 <label for="draft-body">Your writing</label><textarea id="draft-body" maxlength="1000000" placeholder="Keep writing…"></textarea>
-<p id="save-status" role="status"></p><div class="actions"><button id="backup-save">Save a backup</button><label class="button" for="backup-file">Restore a backup</label><input id="backup-file" type="file" accept=".json,application/json" hidden></div>
+<p id="save-status" role="status"></p><div class="actions"><button id="backup-save">Save a backup</button><label class="button" for="backup-file">Restore a backup<input id="backup-file" type="file" accept=".json,application/json" class="sr-only"></label></div>
 </main><script src="/offline.js" type="module"></script></body></html>

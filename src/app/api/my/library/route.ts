@@ -11,7 +11,7 @@ export async function GET() {
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const stories = await prisma.story.findMany({
-    where: { authorName: me.name },
+    where: { authorEmail: me.email },
     orderBy: { createdAt: "desc" },
   });
   const docs = await prisma.myDoc.findMany({

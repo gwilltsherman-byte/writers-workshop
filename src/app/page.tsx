@@ -2,110 +2,232 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
-import { Icon } from "@/components/ui";
-import { IndexCard } from "@/components/IndexCard";
-import { StoryList, StoryListSkeleton, type StoryRow } from "@/components/StoryList";
+import { Icon, Notice } from "@/components/ui";
+import {
+  StoryList,
+  StoryListSkeleton,
+  type StoryRow,
+} from "@/components/StoryList";
 import { createPromptDeck, type GamePrompt } from "@/lib/prompts";
+import { readDraft } from "../../public/draft-storage.js";
+import { useAuth } from "@/contexts/auth";
 
-function promptHref(p: GamePrompt) {
-  return `/editor?prompt=${encodeURIComponent(p.twist ? `${p.text} ${p.twist}` : p.text)}`;
-}
-
-function PromptCard() {
+function StartingPoint() {
   const deck = useRef<ReturnType<typeof createPromptDeck> | null>(null);
   const [prompt, setPrompt] = useState<GamePrompt | null>(null);
   const [dealt, setDealt] = useState(0);
-
-  // Drawn after mount so the server and client render the same markup.
   const draw = useCallback(() => {
     deck.current ??= createPromptDeck();
     setPrompt(deck.current.next());
     setDealt((n) => n + 1);
   }, []);
   useEffect(() => draw(), [draw]);
-
   return (
-    <div>
-      <IndexCard label="Need something to write about?" cardKey={dealt} className="lg:-rotate-1" linesClassName="min-h-[12rem]">
-        {prompt && (
-          <>
-            <p>{prompt.text}</p>
-            {prompt.twist && <p><span className="font-bold">The catch:</span> {prompt.twist}</p>}
-          </>
-        )}
-      </IndexCard>
-      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 px-1">
-        {prompt && (
-          <Link href={promptHref(prompt)} className="link-accent py-2">
-            Write this one
-          </Link>
-        )}
-        <button onClick={draw} className="min-h-11 text-ink-soft underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink hover:decoration-ink">
-          Give me another
+    <section className="starting-point" aria-labelledby="starting-point-title">
+      <div className="prompt-heading">
+        <h2 id="starting-point-title">A starting point</h2>
+        <button
+          onClick={draw}
+          className="prompt-shuffle"
+          aria-label="Try another prompt"
+          title="Try another prompt"
+        >
+          <Icon name="refresh" size={18} />
         </button>
       </div>
-    </div>
+      <div className="prompt-words" key={dealt} aria-live="polite">
+        {prompt ? (
+          <>
+            <p>{prompt.text}</p>
+            {prompt.twist && <p className="prompt-twist">{prompt.twist}</p>}
+          </>
+        ) : (
+          <p>Finding a first sentence…</p>
+        )}
+      </div>
+      <div className="prompt-bottom">
+        <span>Follow it somewhere unexpected.</span>
+        {prompt && (
+          <Link
+            href={`/editor?prompt=${encodeURIComponent([prompt.text, prompt.twist].filter(Boolean).join(" "))}`}
+          >
+            Write from this <Icon name="arrow" size={17} />
+          </Link>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DraftDesk() {
+  const [draft, setDraft] = useState<ReturnType<typeof readDraft> | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    try {
+      setDraft(readDraft(localStorage));
+    } catch {
+      setFailed(true);
+    }
+  }, []);
+  const hasDraft = !!(draft?.title.trim() || draft?.html.trim());
+  const words = draft?.html.trim().split(/\s+/).filter(Boolean).length || 0;
+  return (
+    <section className="draft-desk" aria-labelledby="draft-heading">
+      <div className="desk-caption">
+        <span>
+          <Icon name="pen" size={17} /> Your private draft
+        </span>
+        <span>On this device</span>
+      </div>
+      <div className="draft-preview">
+        <h2 id="draft-heading">
+          {hasDraft
+            ? draft?.title || "Untitled draft"
+            : "There’s a story in here."}
+        </h2>
+        {failed ? (
+          <Notice tone="danger">
+            Your saved draft couldn’t be opened. Go to the editor to restore a
+            backup.
+          </Notice>
+        ) : draft === null ? (
+          <p className="text-muted" role="status">
+            Opening your writing…
+          </p>
+        ) : hasDraft ? (
+          <p className="draft-excerpt">
+            {draft.html ||
+              "The title is a beginning. Give it a first sentence."}
+          </p>
+        ) : (
+          <p className="draft-invitation">
+            An opening line. A half-formed thought. <br />
+            Give it a little room to become something.
+          </p>
+        )}
+      </div>
+      <div className="desk-bottom">
+        <Link href="/editor" className="btn-accent">
+          {hasDraft ? "Continue writing" : "Start writing"}
+          <Icon name="arrow" size={17} />
+        </Link>
+        <span>
+          {hasDraft
+            ? `${words.toLocaleString()} ${words === 1 ? "word" : "words"} · saved here`
+            : "No account needed. Just your words."}
+        </span>
+      </div>
+    </section>
   );
 }
 
 function RecentStories() {
   const [stories, setStories] = useState<StoryRow[] | null>(null);
   const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/stories/list?limit=5")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((j) => setStories(j.items || []))
-      .catch(() => setFailed(true));
+  const load = useCallback(async () => {
+    setFailed(false);
+    setStories(null);
+    try {
+      const r = await fetch("/api/stories/list?limit=3");
+      if (!r.ok) throw new Error();
+      const j = await r.json();
+      setStories(j.items || []);
+    } catch {
+      setFailed(true);
+    }
   }, []);
-
-  // If the library can't be reached, leave the section out rather than claim it's empty.
-  if (failed) return null;
-
+  useEffect(() => {
+    void load();
+  }, [load]);
   return (
-    <section className="mt-24 lg:mt-32">
-      <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
-        <h2 className="text-2xl font-semibold text-ink">Recently published</h2>
-        <Link href="/stories" className="inline-flex items-center gap-1.5 py-2 text-[0.9375rem] text-ink-soft transition-colors hover:text-ink">
-          All stories <Icon name="arrow" size={15} />
+    <section className="recent-stories">
+      <div className="section-heading">
+        <h2>From the workshop</h2>
+        <Link href="/stories">
+          All stories <Icon name="arrow" size={16} />
         </Link>
       </div>
-
-      {stories === null && <StoryListSkeleton />}
-
-      {stories?.length === 0 && (
-        <p className="py-6 text-ink-soft">
-          Nothing’s been published yet. <Link href="/editor" className="link-accent">Yours could be the first.</Link>
-        </p>
+      {failed ? (
+        <div className="empty-inline">
+          <p>
+            Stories couldn’t be loaded. Your private draft is still available.
+          </p>
+          <button className="btn-secondary" onClick={() => void load()}>
+            Try again
+          </button>
+        </div>
+      ) : stories === null ? (
+        <StoryListSkeleton rows={2} />
+      ) : stories.length ? (
+        <StoryList stories={stories} />
+      ) : (
+        <div className="empty-inline">
+          <div>
+            <h3>The first page is still open.</h3>
+            <p>When a writer publishes, their work will appear here.</p>
+          </div>
+          <Link href="/editor" className="link-accent">
+            Write something to share
+          </Link>
+        </div>
       )}
-
-      {!!stories?.length && <StoryList stories={stories} />}
     </section>
   );
 }
 
 export default function Page() {
+  const { me } = useAuth();
   return (
     <AppShell>
-      <section className="grid items-center gap-14 pt-2 lg:grid-cols-[7fr_5fr] lg:gap-20 lg:pt-12">
+      <div className="desk-welcome">
         <div>
-          <h1 className="max-w-[12ch] text-display font-semibold text-ink">
-            Get feedback on your writing.
+          <h1>
+            {me
+              ? `Make yourself at home, ${me.name.split(" ")[0]}.`
+              : "Make room for your writing."}
           </h1>
-          <p className="mt-6 max-w-[40ch] text-xl leading-relaxed text-ink-soft">
-            Swap critiques with other writers.<br className="hidden sm:inline" /> Publish when it’s ready.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Link href="/editor" className="btn-accent px-6 text-base">Start writing</Link>
-            <Link href="/critique/short" className="min-h-11 py-2.5 text-base text-ink underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink">
-              Get a critique
-            </Link>
-          </div>
+          <p>A quiet place to begin. Good company when you’re ready.</p>
         </div>
-
-        <PromptCard />
+        <Link href="/library" className="subtle-link">
+          My library <Icon name="arrow" size={16} />
+        </Link>
+      </div>
+      <div className="desk-grid">
+        <DraftDesk />
+        <StartingPoint />
+      </div>
+      <section className="workshop-paths" aria-label="Find your next step">
+        <div className="path-intro">
+          <h2>
+            Better with <br />
+            another reader.
+          </h2>
+          <p>
+            Writing is yours. <br />
+            The workshop is shared.
+          </p>
+        </div>
+        <Link href="/critique/short" className="workshop-path">
+          <span className="path-top">
+            Exchange critiques <Icon name="arrow" size={18} />
+          </span>
+          <p>
+            Read a piece. Offer a fresh eye. <br />
+            Get thoughtful notes in return.
+          </p>
+          <span className="path-detail">Ten minutes, two writers</span>
+        </Link>
+        <Link href="/game6" className="workshop-path">
+          <span className="path-top">
+            Play with an idea <Icon name="arrow" size={18} />
+          </span>
+          <p>
+            A prompt, a little time pressure, <br />
+            and a room full of possibilities.
+          </p>
+          <span className="path-detail">Three rounds · 2–6 writers</span>
+        </Link>
       </section>
-
       <RecentStories />
     </AppShell>
   );

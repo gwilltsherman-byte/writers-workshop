@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import { prisma } from "./db";
 
-// Sessions use a signed JWT in an httpOnly cookie. Each request verifies the
-// token without relying on shared memory between serverless invocations.
+// Sessions use a signed JWT in an httpOnly cookie. Its stable userId identifies
+// the account; current profile fields come from the database on each request.
 const SECRET =
   process.env.AUTH_SECRET ||
   (process.env.NODE_ENV === "production"
@@ -23,15 +24,28 @@ export function signSession(user: SessionUser): string {
 /** Read + verify the session cookie for the current request (server only). */
 export async function getSession(): Promise<SessionUser | null> {
   if (!SECRET) return null;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  let userId: string;
   try {
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
-    if (!token) return null;
-    const payload = jwt.verify(token, SECRET) as jwt.JwtPayload & Partial<SessionUser>;
-    if (!payload?.userId || !payload.email || !payload.name) return null;
-    return { userId: payload.userId, email: payload.email, name: payload.name };
+    const payload = jwt.verify(token, SECRET);
+    if (
+      typeof payload === "string" ||
+      typeof payload.userId !== "string" ||
+      !payload.userId
+    )
+      return null;
+    userId = payload.userId;
   } catch {
     return null;
   }
+  // Keep lookup errors outside the invalid-token catch: a database outage is
+  // a server failure, not a reason to treat an authenticated writer as a guest.
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true },
+  });
+  return user ? { userId: user.id, email: user.email, name: user.name } : null;
 }
 
 /** Cookie options shared by "set" and "clear" so they always match. */

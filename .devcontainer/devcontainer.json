@@ -1,0 +1,11 @@
+{
+  "name": "Writers' Workshop",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "node",
+  "forwardPorts": [3000],
+  "portsAttributes": {"3000": {"label": "Writers' Workshop", "onAutoForward": "openPreview"}},
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh"
+}

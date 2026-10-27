@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.DS_Store
+*.log
+*.tsbuildinfo
+
+# Local Netlify folder
+.netlify
+
+# Local browser verification images
+/*-verified.png

@@ -1,0 +1,52 @@
+{
+  "name": "writers-workshop",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack --hostname 0.0.0.0",
+    "build": "prisma generate && next build --webpack",
+    "start": "next start --hostname 0.0.0.0",
+    "postinstall": "prisma generate",
+    "prisma": "prisma",
+    "migrate": "prisma migrate dev",
+    "lint": "eslint .",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "migrate:deploy": "prisma migrate deploy",
+    "build:netlify": "node scripts/netlify-build.mjs",
+    "test:smoke": "tsx tests/preview.ts"
+  },
+  "dependencies": {
+    "@netlify/database": "^2.0.1",
+    "@prisma/client": "^5.16.1",
+    "bcryptjs": "^2.4.3",
+    "framer-motion": "^11.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "next": "^16.4.0",
+    "nodemailer": "^10.1.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.16.2",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.14.11",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.4.20",
+    "dotenv": "^16.6.1",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.0",
+    "postcss": "^8.4.41",
+    "prettier": "^3.9.10",
+    "prisma": "^5.16.1",
+    "tailwindcss": "^3.4.10",
+    "tsx": "^4.11.0",
+    "typescript": "^5.5.4"
+  },
+  "overrides": {
+    "postcss-selector-parser": "^7.1.6"
+  }
+}

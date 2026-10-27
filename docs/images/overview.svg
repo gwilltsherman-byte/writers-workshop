@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+<title id="title">Writers’ Workshop — write, share and find your next idea</title>
+<desc id="desc">An overview of Writers’ Workshop: keep a draft, trade critiques and publish stories, or join a writing game. Personal drafts work offline after the first load; shared activities need an internet connection.</desc>
+<rect width="1280" height="720" fill="#faf9f6"/>
+<path d="M72 66H1208" stroke="#201b17" stroke-width="3"/>
+<g fill="#201b17" font-family="Georgia,serif">
+<text x="72" y="145" font-size="60">Writers’ Workshop</text>
+<text x="72" y="202" font-size="27" fill="#494440">A place for your next draft — and the people who help it grow.</text>
+<g transform="translate(72 258)">
+<text y="34" font-size="34">Write.</text>
+<text y="80" font-size="22" fill="#494440">Keep a draft. Choose a genre.</text>
+<text y="115" font-size="22" fill="#494440">Save a backup of your work.</text>
+<rect y="146" width="344" height="158" rx="3" fill="#fff" stroke="#d7d2cb"/>
+<g font-family="'Courier New',monospace" font-size="18">
+<text x="24" y="188">The first sentence</text>
+<text x="24" y="229" fill="#68625e">It began with a letter</text>
+<text x="24" y="264" fill="#68625e">that had no address.</text>
+</g>
+</g>
+<g transform="translate(464 258)">
+<text y="34" font-size="34">Share.</text>
+<text y="80" font-size="22" fill="#494440">Exchange critiques with writers.</text>
+<text y="115" font-size="22" fill="#494440">Publish a story when it’s ready.</text>
+<path d="M0 164H344" stroke="#201b17" stroke-width="2"/>
+<text y="204" font-size="24">Stories &amp; Library</text>
+<path d="M0 224H344M0 268H344" stroke="#d7d2cb"/>
+<text y="253" font-size="19" fill="#494440">Fiction · Poems · Essays</text>
+<text y="296" font-size="19" fill="#494440">Read, respond, write together.</text>
+</g>
+<g transform="translate(856 258)">
+<text y="34" font-size="34">Play.</text>
+<text y="80" font-size="22" fill="#494440">Try a prompt in a writing game.</text>
+<text y="115" font-size="22" fill="#494440">Two to six players. Three rounds.</text>
+<rect y="146" width="352" height="158" rx="3" fill="#fff" stroke="#d7d2cb"/>
+<path d="M0 185H352" stroke="#c02d22" stroke-width="2"/>
+<path d="M0 225H352M0 263H352M0 301H352" stroke="#a8c9e2"/>
+<g font-family="'Courier New',monospace" font-size="18">
+<text x="22" y="173" fill="#68625e">A prompt to begin</text>
+<text x="22" y="215">A stranger returns</text>
+<text x="22" y="253">something you lost</text>
+<text x="22" y="291">years ago.</text>
+</g>
+</g>
+<path d="M72 604H1208" stroke="#d7d2cb"/>
+<text x="72" y="646" font-size="22">Personal drafts stay on your device. Shared writing brings you together.</text>
+<text x="72" y="683" font-size="17" fill="#68625e">Offline drafting after the first load · Online chat, critiques, games and stories</text>
+<text x="1208" y="683" font-size="15" text-anchor="end" fill="#68625e">Product overview graphic</text>
+</g>
+</svg>
